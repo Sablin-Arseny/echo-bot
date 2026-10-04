@@ -5,6 +5,8 @@ from app.src.models.base import Base
 
 
 class Event(Base):
+    """Event with participants and shared expenses."""
+
     __tablename__ = "events"
 
     id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)

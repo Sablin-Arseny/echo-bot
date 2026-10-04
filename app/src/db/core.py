@@ -22,6 +22,11 @@ session_maker = sessionmaker(
 
 
 class BaseDB:
+    """Provides asynchronous database session management.
+
+    Commits successful operations and rolls back failures.
+    """
+
     @asynccontextmanager
     async def create_session(self):
         session = session_maker()

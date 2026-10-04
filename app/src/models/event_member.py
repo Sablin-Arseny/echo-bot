@@ -5,6 +5,8 @@ from app.src.models.base import Base
 
 
 class EventMember(Base):
+    """User membership within a specific event."""
+
     __tablename__ = "event_member"
 
     event_id = Column(ForeignKey("events.id"), primary_key=True, nullable=False)

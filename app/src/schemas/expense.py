@@ -19,6 +19,8 @@ PARTICIPANT_STATUS = Literal[
 
 
 class ParticipantResponse(BaseModel):
+    """Participant share status within an expense."""
+
     id: int
     user: User
     share_amount: float
@@ -30,6 +32,8 @@ class ParticipantResponse(BaseModel):
 
 
 class ExpenseResponse(BaseModel):
+    """Complete expense representation with participants."""
+
     id: int
     event_id: int
     paid_by: User
@@ -42,11 +46,15 @@ class ExpenseResponse(BaseModel):
 
 
 class ExpenseParticipantRequest(BaseModel):
+    """Participant share for expense creation."""
+
     tg_id: str
     share_amount: float | None = None
 
 
 class CreateExpenseRequest(BaseModel):
+    """Data for creating a shared expense."""
+
     event_id: int
     amount: float | None = None
     is_equally: bool
@@ -61,6 +69,8 @@ class CreateExpenseRequest(BaseModel):
 
 
 class UserExpenseResponse(BaseModel):
+    """User debt for a specific expense."""
+
     id: int
     expense_id: int
     participant_id: int
@@ -69,16 +79,22 @@ class UserExpenseResponse(BaseModel):
 
 
 class UserTotalExpenseResponse(BaseModel):
+    """Total user debt across expenses."""
+
     tg_id: str
     total_amount: float
     expenses: list[UserExpenseResponse]
 
 
 class MarkParticipantPaidRequest(BaseModel):
+    """Data for recording a debt payment."""
+
     expense_id: int
     amount: float | None = None
 
 
 class ConfirmPaymentRequest(BaseModel):
+    """Data for confirming participant payment."""
+
     expense_id: int
     participant_tg_id: str

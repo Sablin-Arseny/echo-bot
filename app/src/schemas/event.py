@@ -5,6 +5,8 @@ from app.src.schemas import Participant
 
 
 class CreateEventRequest(BaseModel):
+    """Data for creating a new event."""
+
     name: str
     description: str | None = None
     start_date: datetime
@@ -14,6 +16,8 @@ class CreateEventRequest(BaseModel):
 
 
 class EventResponse(BaseModel):
+    """Complete event representation with participants."""
+
     id: int
     name: str
     description: str | None = None
@@ -28,6 +32,8 @@ class EventResponse(BaseModel):
 
 
 class UpdateEvent(BaseModel):
+    """Data for updating an existing event."""
+
     id: int
     name: str
     description: str | None = None

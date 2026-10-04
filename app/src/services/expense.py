@@ -15,6 +15,11 @@ from app.src.schemas import (
 
 
 class ExpenseService:
+    """Manages expense and payment business operations.
+
+    Coordinates ExpenseDB and UserDB for expense workflows.
+    """
+
     _expense_db: ExpenseDB
     _user_db: UserDB
 
@@ -28,6 +33,11 @@ class ExpenseService:
         return cls(ExpenseDB.get_as_dependency(), UserDB.get_as_dependency())
 
     async def get(self, event_id: int):
+        """Returns expenses for the specified event.
+
+        Builds responses with payer and participant data.
+        """
+
         expenses = await self._expense_db.get(event_id)
         for expense in expenses:
             yield await self._build_expense_response(expense)
@@ -80,6 +90,11 @@ class ExpenseService:
     async def create_expense_with_participants(
         self, expense_request: CreateExpenseRequest, paid_by: User
     ) -> ExpenseResponse:
+        """Creates an expense with participant shares.
+
+        Supports equal division or individually specified amounts.
+        """
+
         paid_by_user_orm = await self._user_db.get(User(tg_id=paid_by.tg_id))
         if not paid_by_user_orm:
             raise ValueError(f"User with tg_id {paid_by.tg_id} not found")
@@ -161,6 +176,11 @@ class ExpenseService:
     async def mark_participant_paid(
         self, request: MarkParticipantPaidRequest, current_user: User
     ) -> ParticipantResponse:
+        """Records the current user's debt payment.
+
+        Validates the debt and updates its payment status.
+        """
+
         expense = await self._expense_db.get_expense_by_id(request.expense_id)
         if not expense:
             raise ValueError(f"Expense with id {request.expense_id} not found")
@@ -210,6 +230,11 @@ class ExpenseService:
     async def confirm_payment(
         self, request: ConfirmPaymentRequest, current_user: User
     ) -> ParticipantResponse:
+        """Confirms a participant's completed payment.
+
+        Allows confirmation only for the expense creator.
+        """
+
         expense = await self._expense_db.get_expense_by_id(request.expense_id)
         if not expense:
             raise ValueError(f"Expense with id {request.expense_id} not found")
@@ -256,6 +281,11 @@ class ExpenseService:
     async def get_user_expenses(
         self, user: User, event_id: int | None = None
     ) -> UserTotalExpenseResponse:
+        """Returns expenses assigned to a user.
+
+        Includes the total amount and individual expense shares.
+        """
+
         user_orm = await self._user_db.get(user)
         if not user_orm:
             raise ValueError("User not found")
@@ -287,6 +317,11 @@ class ExpenseService:
         )
 
     async def get_expense_detail(self, expense_id: int) -> ExpenseResponse:
+        """Returns complete details for an expense.
+
+        Builds payer and participant information for the response.
+        """
+
         expense = await self._expense_db.get_expense_by_id(expense_id)
         if not expense:
             raise ValueError(f"Expense with id {expense_id} not found")
@@ -296,6 +331,11 @@ class ExpenseService:
     async def delete_expense(
         self, expense_id: int, paid_by: User
     ) -> ExpenseResponse:
+        """Marks an expense as deleted.
+
+        Allows deletion only for the expense creator.
+        """
+
         expense = await self._expense_db.get_expense_by_id(expense_id)
         if not expense:
             raise ValueError(f"Expense with id {expense_id} not found")

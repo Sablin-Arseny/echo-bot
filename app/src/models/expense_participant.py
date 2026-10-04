@@ -5,6 +5,8 @@ from app.src.models.base import Base
 
 
 class ExpenseParticipant(Base):
+    """User share within a shared expense."""
+
     __tablename__ = "expense_participants"
 
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)

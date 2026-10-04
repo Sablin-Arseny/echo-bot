@@ -18,6 +18,8 @@ ROLES = Literal[
 
 
 class User(BaseModel):
+    """User profile data."""
+
     id: int | None = None
     username: str | None = None
     tg_id: str | None = None
@@ -27,5 +29,7 @@ class User(BaseModel):
 
 
 class Participant(User):
+    """Event participant with status and role."""
+
     role: ROLES | None = None
     status: STATUS = "DRAFT"

@@ -5,6 +5,8 @@ from app.src.models.base import Base
 
 
 class User(Base):
+    """System user with a Telegram profile."""
+
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
