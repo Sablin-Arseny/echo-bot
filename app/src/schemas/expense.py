@@ -19,7 +19,7 @@ PARTICIPANT_STATUS = Literal[
 
 
 class ParticipantResponse(BaseModel):
-    """Состояние доли участника в расходе."""
+    """Participant share status within an expense."""
 
     id: int
     user: User
@@ -32,7 +32,7 @@ class ParticipantResponse(BaseModel):
 
 
 class ExpenseResponse(BaseModel):
-    """Полное представление расхода с участниками."""
+    """Complete expense representation with participants."""
 
     id: int
     event_id: int
@@ -46,14 +46,14 @@ class ExpenseResponse(BaseModel):
 
 
 class ExpenseParticipantRequest(BaseModel):
-    """Доля участника при создании расхода."""
+    """Participant share for expense creation."""
 
     tg_id: str
     share_amount: float | None = None
 
 
 class CreateExpenseRequest(BaseModel):
-    """Данные для создания общего расхода."""
+    """Data for creating a shared expense."""
 
     event_id: int
     amount: float | None = None
@@ -69,7 +69,7 @@ class CreateExpenseRequest(BaseModel):
 
 
 class UserExpenseResponse(BaseModel):
-    """Долг пользователя по отдельному расходу."""
+    """User debt for a specific expense."""
 
     id: int
     expense_id: int
@@ -79,7 +79,7 @@ class UserExpenseResponse(BaseModel):
 
 
 class UserTotalExpenseResponse(BaseModel):
-    """Суммарные долги пользователя по расходам."""
+    """Total user debt across expenses."""
 
     tg_id: str
     total_amount: float
@@ -87,14 +87,14 @@ class UserTotalExpenseResponse(BaseModel):
 
 
 class MarkParticipantPaidRequest(BaseModel):
-    """Данные для отметки оплаты долга."""
+    """Data for recording a debt payment."""
 
     expense_id: int
     amount: float | None = None
 
 
 class ConfirmPaymentRequest(BaseModel):
-    """Данные для подтверждения оплаты участника."""
+    """Data for confirming participant payment."""
 
     expense_id: int
     participant_tg_id: str

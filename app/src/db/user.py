@@ -8,9 +8,9 @@ from app.src.schemas import User
 
 
 class UserDB(BaseDB):
-    """Выполняет операции с пользователями в базе.
+    """Manages user records in the database.
 
-    Создаёт, читает и обновляет пользовательские записи.
+    Creates, retrieves, and updates user records.
     """
 
     @classmethod
@@ -19,9 +19,9 @@ class UserDB(BaseDB):
         return cls()
 
     async def create(self, user: User):
-        """Создаёт новую запись пользователя.
+        """Creates a new user record.
 
-        Сохраняет данные схемы и возвращает ORM-объект.
+        Stores schema data and returns the ORM object.
         """
 
         async with self.create_session() as session:
@@ -33,9 +33,9 @@ class UserDB(BaseDB):
             return user
 
     async def update(self, user: User, update_user: User):
-        """Обновляет существующую запись пользователя.
+        """Updates an existing user record.
 
-        Изменяет заполненные поля, кроме идентификатора.
+        Changes populated fields except the identifier.
         """
 
         async with self.create_session() as session:
@@ -53,9 +53,9 @@ class UserDB(BaseDB):
             return user_orm
 
     async def get(self, user: User):
-        """Находит пользователя по заполненным полям.
+        """Finds a user by populated fields.
 
-        Объединяет переданные значения точными условиями.
+        Combines provided values using exact-match conditions.
         """
 
         stmt = select(UserOrm)
@@ -67,9 +67,9 @@ class UserDB(BaseDB):
             return user
 
     async def get_all(self):
-        """Возвращает все записи пользователей.
+        """Returns all user records.
 
-        Результат содержит список ORM-объектов.
+        The result contains a list of ORM objects.
         """
 
         stmt = select(UserOrm)
@@ -79,9 +79,9 @@ class UserDB(BaseDB):
             return users.all()
 
     async def check_user(self, user_dict: dict) -> bool:
-        """Проверяет существование пользователя по полям.
+        """Checks user existence using provided fields.
 
-        Учитывает известные непустые поля словаря.
+        Uses only recognized, non-empty dictionary fields.
         """
 
         stmt = select(UserOrm)

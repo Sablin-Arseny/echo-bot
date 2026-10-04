@@ -5,7 +5,7 @@ from app.src.schemas import Participant
 
 
 class CreateEventRequest(BaseModel):
-    """Данные для создания нового мероприятия."""
+    """Data for creating a new event."""
 
     name: str
     description: str | None = None
@@ -16,7 +16,7 @@ class CreateEventRequest(BaseModel):
 
 
 class EventResponse(BaseModel):
-    """Полное представление мероприятия с участниками."""
+    """Complete event representation with participants."""
 
     id: int
     name: str
@@ -32,7 +32,7 @@ class EventResponse(BaseModel):
 
 
 class UpdateEvent(BaseModel):
-    """Данные для изменения существующего мероприятия."""
+    """Data for updating an existing event."""
 
     id: int
     name: str

@@ -5,7 +5,7 @@ from app.src.models.base import Base
 
 
 class Expense(Base):
-    """Общий расход внутри одного мероприятия."""
+    """Shared expense within a single event."""
 
     __tablename__ = "expense"
 

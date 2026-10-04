@@ -5,7 +5,7 @@ from app.src.models.base import Base
 
 
 class EventMember(Base):
-    """Участие пользователя в конкретном мероприятии."""
+    """User membership within a specific event."""
 
     __tablename__ = "event_member"
 

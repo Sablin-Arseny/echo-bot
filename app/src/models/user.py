@@ -5,7 +5,7 @@ from app.src.models.base import Base
 
 
 class User(Base):
-    """Пользователь системы с Telegram-профилем."""
+    """System user with a Telegram profile."""
 
     __tablename__ = "users"
 

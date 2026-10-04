@@ -5,7 +5,7 @@ from app.src.models.base import Base
 
 
 class Event(Base):
-    """Мероприятие с участниками и расходами."""
+    """Event with participants and shared expenses."""
 
     __tablename__ = "events"
 

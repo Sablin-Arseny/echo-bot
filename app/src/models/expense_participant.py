@@ -5,7 +5,7 @@ from app.src.models.base import Base
 
 
 class ExpenseParticipant(Base):
-    """Доля пользователя в общем расходе."""
+    """User share within a shared expense."""
 
     __tablename__ = "expense_participants"
 
