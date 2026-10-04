@@ -18,4 +18,5 @@ class Event(Base):
     tg_chat = Column(String)
     event_place = Column(String)
 
+    expenses = relationship("Expense", back_populates="events")
     event_members = relationship("EventMember", back_populates="events")

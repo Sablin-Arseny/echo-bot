@@ -13,3 +13,5 @@ class User(Base):
     full_name = Column(String)
 
     event_members = relationship("EventMember", back_populates="users")
+    expense_participants = relationship("ExpenseParticipant", back_populates="users")
+    expenses = relationship("Expense", back_populates="users")
