@@ -2,6 +2,11 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    """Defines application and database settings.
+
+    Loads values from environment variables and .env.
+    """
+
     # project
     name: str = "echo"
 
