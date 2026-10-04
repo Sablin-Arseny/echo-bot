@@ -4,8 +4,6 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     # project
     name: str = "echo"
-    app_host: str = "0.0.0.0"
-    app_port: int = 8000
 
     # PostgreSQL
     db_name: str = "echo_db"
