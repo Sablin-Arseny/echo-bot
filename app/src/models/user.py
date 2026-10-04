@@ -1,4 +1,5 @@
 from sqlalchemy import Column, String, Integer
+from sqlalchemy.orm import relationship
 
 from app.src.models.base import Base
 
@@ -10,3 +11,5 @@ class User(Base):
     username = Column(String, unique=True, nullable=False)
     tg_id = Column(String, unique=True, nullable=False)
     full_name = Column(String)
+
+    event_members = relationship("EventMember", back_populates="users")

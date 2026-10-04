@@ -1,4 +1,20 @@
 from pydantic import BaseModel, ConfigDict
+from typing import Literal
+
+
+STATUS = Literal[
+    "INVITED",
+    "REFUSED",
+    "PARTICIPATING",
+    "DELETED",
+    "DRAFT",
+]
+
+ROLES = Literal[
+    "OWNER",
+    "ADMIN",
+    "PARTICIPANT",
+]
 
 
 class User(BaseModel):
@@ -8,3 +24,8 @@ class User(BaseModel):
     full_name: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class Participant(User):
+    role: ROLES | None = None
+    status: STATUS = "DRAFT"
