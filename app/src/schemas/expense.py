@@ -19,6 +19,8 @@ PARTICIPANT_STATUS = Literal[
 
 
 class ParticipantResponse(BaseModel):
+    """Состояние доли участника в расходе."""
+
     id: int
     user: User
     share_amount: float
@@ -30,6 +32,8 @@ class ParticipantResponse(BaseModel):
 
 
 class ExpenseResponse(BaseModel):
+    """Полное представление расхода с участниками."""
+
     id: int
     event_id: int
     paid_by: User
@@ -42,11 +46,15 @@ class ExpenseResponse(BaseModel):
 
 
 class ExpenseParticipantRequest(BaseModel):
+    """Доля участника при создании расхода."""
+
     tg_id: str
     share_amount: float | None = None
 
 
 class CreateExpenseRequest(BaseModel):
+    """Данные для создания общего расхода."""
+
     event_id: int
     amount: float | None = None
     is_equally: bool
@@ -61,6 +69,8 @@ class CreateExpenseRequest(BaseModel):
 
 
 class UserExpenseResponse(BaseModel):
+    """Долг пользователя по отдельному расходу."""
+
     id: int
     expense_id: int
     participant_id: int
@@ -69,16 +79,22 @@ class UserExpenseResponse(BaseModel):
 
 
 class UserTotalExpenseResponse(BaseModel):
+    """Суммарные долги пользователя по расходам."""
+
     tg_id: str
     total_amount: float
     expenses: list[UserExpenseResponse]
 
 
 class MarkParticipantPaidRequest(BaseModel):
+    """Данные для отметки оплаты долга."""
+
     expense_id: int
     amount: float | None = None
 
 
 class ConfirmPaymentRequest(BaseModel):
+    """Данные для подтверждения оплаты участника."""
+
     expense_id: int
     participant_tg_id: str

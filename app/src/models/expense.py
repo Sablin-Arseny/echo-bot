@@ -5,6 +5,8 @@ from app.src.models.base import Base
 
 
 class Expense(Base):
+    """Общий расход внутри одного мероприятия."""
+
     __tablename__ = "expense"
 
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
