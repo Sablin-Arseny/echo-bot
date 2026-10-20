@@ -1,16 +1,17 @@
+from decimal import ROUND_DOWN, Decimal
 from functools import cache
 
 from app.src.db.expense import ExpenseDB
 from app.src.db.user import UserDB
 from app.src.schemas import (
-    ExpenseResponse,
-    User,
+    ConfirmPaymentRequest,
     CreateExpenseRequest,
+    ExpenseResponse,
+    MarkParticipantPaidRequest,
+    ParticipantResponse,
+    User,
     UserExpenseResponse,
     UserTotalExpenseResponse,
-    MarkParticipantPaidRequest,
-    ConfirmPaymentRequest,
-    ParticipantResponse,
 )
 
 
@@ -109,7 +110,7 @@ class ExpenseService:
             participants_map[participant_request.tg_id] = user_orm
 
         if expense_request.is_equally:
-            total_amount = expense_request.amount
+            total_amount = round(expense_request.amount, 2)
         else:
             total_amount = sum(
                 participant.share_amount or 0
@@ -126,12 +127,18 @@ class ExpenseService:
         expense_orm = await self._expense_db.create_expense(expense_data)
 
         if expense_request.is_equally:
-            share_amount = round(
-                total_amount / len(expense_request.participants),
-                2,
+            total = Decimal(str(total_amount)).quantize(Decimal("0.01"))
+            participant_count = len(expense_request.participants)
+            base_share = (total / participant_count).quantize(
+                Decimal("0.01"), rounding=ROUND_DOWN
             )
-            for participant_request in expense_request.participants:
+            remainder = int((total - base_share * participant_count) * 100)
+
+            for index, participant_request in enumerate(expense_request.participants):
                 user_orm = participants_map[participant_request.tg_id]
+                share_amount = float(
+                    base_share + (Decimal("0.01") if index < remainder else 0)
+                )
 
                 if user_orm.id == paid_by_user_orm.id:
                     participant_data = {
@@ -210,8 +217,7 @@ class ExpenseService:
         if paid_amount is None or paid_amount <= 0:
             raise ValueError("Payment amount must be positive")
 
-        if paid_amount > expense_participant.share_amount:
-            paid_amount = expense_participant.share_amount
+        paid_amount = min(paid_amount, expense_participant.share_amount)
 
         await self._expense_db.mark_participant_paid(
             expense_participant.id, paid_amount
@@ -328,9 +334,7 @@ class ExpenseService:
 
         return await self._build_expense_response(expense)
 
-    async def delete_expense(
-        self, expense_id: int, paid_by: User
-    ) -> ExpenseResponse:
+    async def delete_expense(self, expense_id: int, paid_by: User) -> ExpenseResponse:
         """Marks an expense as deleted.
 
         Allows deletion only for the expense creator.

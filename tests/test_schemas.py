@@ -1,10 +1,11 @@
 """Тесты валидации Pydantic-схем проекта Echo."""
+
 import pytest
 from pydantic import ValidationError
 
-from app.src.schemas.user import User, Participant
 from app.src.schemas.event import CreateEventRequest
 from app.src.schemas.expense import CreateExpenseRequest, ExpenseParticipantRequest
+from app.src.schemas.user import Participant
 
 
 def test_participant_inherits_user():
@@ -14,7 +15,7 @@ def test_participant_inherits_user():
         tg_id="123",
         full_name="Мария Расторгуева",
         role="OWNER",
-        status="PARTICIPATING"
+        status="PARTICIPATING",
     )
     assert participant.username == "maria"
     assert participant.role == "OWNER"
@@ -22,9 +23,7 @@ def test_participant_inherits_user():
 
 def test_event_requires_name_and_date():
     with pytest.raises(ValidationError):
-        CreateEventRequest(
-            description="нет названия и даты"
-        )
+        CreateEventRequest(description="нет названия и даты")
 
 
 def test_equal_split_valid():
@@ -34,7 +33,7 @@ def test_equal_split_valid():
         is_equally=True,
         participants=[
             ExpenseParticipantRequest(tg_id="111"),
-            ExpenseParticipantRequest(tg_id="222")
+            ExpenseParticipantRequest(tg_id="222"),
         ],
     )
     assert expense.amount == 900
@@ -45,7 +44,5 @@ def test_equal_split_requires_amount():
         CreateExpenseRequest(
             event_id=1,
             is_equally=True,
-            participants=[
-                ExpenseParticipantRequest(tg_id="111")
-            ],
+            participants=[ExpenseParticipantRequest(tg_id="111")],
         )

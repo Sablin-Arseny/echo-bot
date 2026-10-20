@@ -2,7 +2,6 @@ from sqlalchemy.orm import declarative_base
 
 from app.src.db.core import async_engine
 
-
 Base = declarative_base()
 
 

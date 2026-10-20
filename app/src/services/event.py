@@ -3,13 +3,13 @@ from functools import cache
 from app.src.db.event import EventDB
 from app.src.db.user import UserDB
 from app.src.schemas import (
-    CreateEventRequest,
-    User,
-    Participant,
-    EventResponse,
-    UpdateEvent,
-    STATUS,
     ROLES,
+    STATUS,
+    CreateEventRequest,
+    EventResponse,
+    Participant,
+    UpdateEvent,
+    User,
 )
 
 
@@ -60,11 +60,20 @@ class EventService:
 
         return await self.get(event.id)
 
-    async def update(self, event: UpdateEvent):
+    async def update(self, event: UpdateEvent, user: User):
         """Updates data for an existing event.
 
         Passes populated fields to EventDB.
         """
+
+        participants = await self.get_participants(event.id)
+        users = [
+            participant for participant in participants if participant.id == user.id
+        ]
+        if not users:
+            raise LookupError(f"User is not found for event {event.id}")
+        if users[0].role not in {"ADMIN", "OWNER"}:
+            raise ValueError("User role must be ADMIN or OWNER")
 
         update_event = event.model_dump(exclude_none=True, exclude={"id"})
         event = await self._event_db.update_event(event.id, update_event)
@@ -120,7 +129,7 @@ class EventService:
 
         participants = await self.get_participants(event_id)
         users = [p for p in participants if p.id == user.id]
-        if not user:
+        if not users:
             raise LookupError(f"User is not found for event {event_id}")
         user_role = users[0].role
         if user_role != "ADMIN" and user_role != "OWNER":
@@ -151,7 +160,7 @@ class EventService:
 
         participants = await self.get_participants(event_id)
         users = [p for p in participants if p.id == user.id]
-        if not user:
+        if not users:
             raise LookupError(f"User is not found for event {event_id}")
         user_role = users[0].role
         if user_role != "ADMIN" and user_role != "OWNER":

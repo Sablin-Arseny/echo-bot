@@ -1,8 +1,8 @@
-from pydantic import BaseModel, ConfigDict, Field, model_validator
 from typing import Literal
 
-from app.src.schemas.user import User
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.src.schemas.user import User
 
 EXPENSE_STATUS = Literal[
     "ACTIVE",
@@ -63,8 +63,17 @@ class CreateExpenseRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_amount_requirement(self):
+        if not self.participants:
+            raise ValueError("participants must not be empty")
         if self.is_equally and self.amount is None:
             raise ValueError("amount is required when is_equally is True")
+        if self.is_equally and self.amount <= 0:
+            raise ValueError("amount must be positive")
+        if not self.is_equally and any(
+            participant.share_amount is None or participant.share_amount <= 0
+            for participant in self.participants
+        ):
+            raise ValueError("participant shares must be positive")
         return self
 
 

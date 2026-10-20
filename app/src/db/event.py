@@ -3,8 +3,9 @@ from functools import cache
 from sqlalchemy import select
 
 from app.src.db.core import BaseDB
-from app.src.models import Event, EventMember, User as UserOrm
-from app.src.schemas import User, STATUS, ROLES
+from app.src.models import Event, EventMember
+from app.src.models import User as UserOrm
+from app.src.schemas import ROLES, STATUS, User
 
 
 class EventDB(BaseDB):

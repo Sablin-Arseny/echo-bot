@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, ForeignKey, Float, text
+from sqlalchemy import Column, Float, ForeignKey, Integer, String, text
 from sqlalchemy.orm import relationship
 
 from app.src.models.base import Base
@@ -18,6 +18,4 @@ class Expense(Base):
 
     events = relationship("Event", back_populates="expenses")
     users = relationship("User", back_populates="expenses")
-    expense_participants = relationship(
-        "ExpenseParticipant", back_populates="expense"
-    )
+    expense_participants = relationship("ExpenseParticipant", back_populates="expense")

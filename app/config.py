@@ -19,8 +19,8 @@ class Settings(BaseSettings):
     db_port: int = 5432
     db_echo: bool = False
 
-    # Auth
-    secret_key: str = "<KEY>"
+    # Telegram
+    bot_token: str = ""
 
     class Config:
         env_file = ".env"
