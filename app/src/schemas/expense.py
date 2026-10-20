@@ -1,8 +1,8 @@
-from pydantic import BaseModel, ConfigDict, Field, model_validator
 from typing import Literal
 
-from app.src.schemas.user import User
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.src.schemas.user import User
 
 EXPENSE_STATUS = Literal[
     "ACTIVE",

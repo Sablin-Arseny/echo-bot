@@ -1,4 +1,4 @@
-from decimal import Decimal, ROUND_DOWN
+from decimal import ROUND_DOWN, Decimal
 from html import escape
 
 from aiogram import F, Router
@@ -22,8 +22,8 @@ from app.src.services.expense import ExpenseService
 
 from .common import ensure_user, parse_amount, require_event_member
 
-
 router = Router()
+
 
 def expense_text(expense) -> str:
     lines = [
@@ -34,7 +34,11 @@ def expense_text(expense) -> str:
         "",
     ]
     for participant in expense.participants:
-        name = participant.user.full_name or participant.user.username or participant.user.tg_id
+        name = (
+            participant.user.full_name
+            or participant.user.username
+            or participant.user.tg_id
+        )
         status = (
             "Частично оплачен"
             if participant.status == "PENDING" and participant.paid_amount > 0
@@ -48,17 +52,17 @@ def expense_text(expense) -> str:
     return "\n".join(lines)
 
 
-
 @router.callback_query(F.data.startswith("event:expenses:"))
 async def event_expenses(callback: CallbackQuery) -> None:
     event_id = int(callback.data.rsplit(":", 1)[1])
     user = await ensure_user(callback)
     await require_event_member(event_id, user)
     expenses = [
-        expense async for expense in ExpenseService.get_as_dependency().get(event_id)
+        expense
+        async for expense in ExpenseService.get_as_dependency().get(event_id)
         if expense.status != "DELETED"
     ]
-    total = sum((Decimal(str(expense.amount)) for expense in expenses), Decimal("0"))
+    total = sum((Decimal(str(expense.amount)) for expense in expenses), Decimal(0))
     builder = InlineKeyboardBuilder()
     for expense in expenses:
         label = expense.description or f"Расход #{expense.id}"
@@ -73,7 +77,9 @@ async def event_expenses(callback: CallbackQuery) -> None:
             text="Добавить расход", callback_data=f"expense:create:{event_id}"
         )
     )
-    builder.row(InlineKeyboardButton(text="Назад", callback_data=f"event:view:{event_id}"))
+    builder.row(
+        InlineKeyboardButton(text="Назад", callback_data=f"event:view:{event_id}")
+    )
     text = f"💰 Расходы события\nВсего: {total:.2f}"
     if not expenses:
         text += "\n\nРасходов пока нет."
@@ -92,7 +98,9 @@ async def view_expense(callback: CallbackQuery) -> None:
         (item for item in expense.participants if item.user.tg_id == user.tg_id), None
     )
     if participant and participant.remaining_amount > 0:
-        builder.button(text="Отметить оплату", callback_data=f"payment:create:{expense_id}")
+        builder.button(
+            text="Отметить оплату", callback_data=f"payment:create:{expense_id}"
+        )
     if expense.paid_by.id == user.id:
         for item in expense.participants:
             if item.status == "PAID":
@@ -101,14 +109,18 @@ async def view_expense(callback: CallbackQuery) -> None:
                     text=f"Подтвердить: {name}",
                     callback_data=f"payment:confirm:{expense_id}:{item.user.tg_id}",
                 )
-        builder.button(text="Удалить расход", callback_data=f"expense:delete:{expense_id}")
+        builder.button(
+            text="Удалить расход", callback_data=f"expense:delete:{expense_id}"
+        )
     builder.adjust(1)
     builder.row(
         InlineKeyboardButton(
             text="Назад", callback_data=f"event:expenses:{expense.event_id}"
         )
     )
-    await callback.message.edit_text(expense_text(expense), reply_markup=builder.as_markup())
+    await callback.message.edit_text(
+        expense_text(expense), reply_markup=builder.as_markup()
+    )
     await callback.answer()
 
 
@@ -120,7 +132,9 @@ async def create_expense(callback: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
     await state.update_data(event_id=event_id)
     await state.set_state(ExpenseForm.description)
-    await callback.message.edit_text("Введите описание расхода", reply_markup=cancel_menu())
+    await callback.message.edit_text(
+        "Введите описание расхода", reply_markup=cancel_menu()
+    )
     await callback.answer()
 
 
@@ -147,7 +161,9 @@ async def expense_amount(message: Message, state: FSMContext) -> None:
 async def expense_mode(callback: CallbackQuery, state: FSMContext) -> None:
     mode = callback.data.rsplit(":", 1)[1]
     data = await state.get_data()
-    participants = await EventService.get_as_dependency().get_participants(data["event_id"])
+    participants = await EventService.get_as_dependency().get_participants(
+        data["event_id"]
+    )
     participants = [item for item in participants if item.status == "PARTICIPATING"]
     serialized = [
         {
@@ -172,7 +188,9 @@ async def toggle_expense_member(callback: CallbackQuery, state: FSMContext) -> N
     selected = set(data["selected"])
     selected.remove(tg_id) if tg_id in selected else selected.add(tg_id)
     await state.update_data(selected=list(selected))
-    participants = await EventService.get_as_dependency().get_participants(data["event_id"])
+    participants = await EventService.get_as_dependency().get_participants(
+        data["event_id"]
+    )
     participants = [item for item in participants if item.status == "PARTICIPATING"]
     await callback.message.edit_reply_markup(
         reply_markup=participants_menu(participants, selected)
@@ -187,7 +205,9 @@ async def finish_expense_members(callback: CallbackQuery, state: FSMContext) -> 
         await callback.answer("Выберите хотя бы одного участника", show_alert=True)
         return
     selected = [
-        item for item in data["available_participants"] if item["tg_id"] in data["selected"]
+        item
+        for item in data["available_participants"]
+        if item["tg_id"] in data["selected"]
     ]
     await state.update_data(selected_participants=selected)
     if data["mode"] == "equal":
@@ -219,7 +239,7 @@ async def manual_share(message: Message, state: FSMContext) -> None:
     index = data["manual_index"]
     shares = data["shares"]
     total = Decimal(data["amount"])
-    assigned = sum((Decimal(value) for value in shares.values()), Decimal("0"))
+    assigned = sum((Decimal(value) for value in shares.values()), Decimal(0))
     remaining = total - assigned
     if amount >= remaining:
         await message.answer(
@@ -229,7 +249,7 @@ async def manual_share(message: Message, state: FSMContext) -> None:
     shares[participants[index]["tg_id"]] = str(amount)
     index += 1
     if index == len(participants) - 1:
-        assigned = sum((Decimal(value) for value in shares.values()), Decimal("0"))
+        assigned = sum((Decimal(value) for value in shares.values()), Decimal(0))
         shares[participants[index]["tg_id"]] = str(total - assigned)
         await state.update_data(shares=shares, manual_index=index)
         await show_expense_confirmation(message, state)
@@ -244,7 +264,9 @@ async def manual_share(message: Message, state: FSMContext) -> None:
 def equal_shares(total: Decimal, count: int) -> list[Decimal]:
     base = (total / count).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
     remainder = int((total - base * count) * 100)
-    return [base + (Decimal("0.01") if index < remainder else 0) for index in range(count)]
+    return [
+        base + (Decimal("0.01") if index < remainder else 0) for index in range(count)
+    ]
 
 
 async def show_expense_confirmation(
@@ -265,7 +287,9 @@ async def show_expense_confirmation(
         "",
     ]
     for participant in participants:
-        lines.append(f"{escape(participant['name'])}: {shares[participant['tg_id']]:.2f}")
+        lines.append(
+            f"{escape(participant['name'])}: {shares[participant['tg_id']]:.2f}"
+        )
     await state.set_state(ExpenseForm.confirmation)
     method = message.edit_text if edit else message.answer
     await method("\n".join(lines), reply_markup=confirmation_menu("expense"))
@@ -299,11 +323,12 @@ async def save_expense(callback: CallbackQuery, state: FSMContext) -> None:
         request, user
     )
     await state.clear()
-    await callback.message.edit_text(expense_text(expense), reply_markup=event_menu(expense.event_id))
+    await callback.message.edit_text(
+        expense_text(expense), reply_markup=event_menu(expense.event_id)
+    )
     await callback.answer()
     event = await EventService.get_as_dependency().get(expense.event_id)
     await notify_new_expense(callback.bot, event.name, expense)
-
 
 
 @router.callback_query(F.data.startswith("expense:delete:"))
@@ -311,5 +336,7 @@ async def delete_expense(callback: CallbackQuery) -> None:
     expense_id = int(callback.data.rsplit(":", 1)[1])
     user = await ensure_user(callback)
     expense = await ExpenseService.get_as_dependency().delete_expense(expense_id, user)
-    await callback.message.edit_text("Расход удалён.", reply_markup=event_menu(expense.event_id))
+    await callback.message.edit_text(
+        "Расход удалён.", reply_markup=event_menu(expense.event_id)
+    )
     await callback.answer()

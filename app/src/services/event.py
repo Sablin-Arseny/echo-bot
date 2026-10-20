@@ -3,13 +3,13 @@ from functools import cache
 from app.src.db.event import EventDB
 from app.src.db.user import UserDB
 from app.src.schemas import (
-    CreateEventRequest,
-    User,
-    Participant,
-    EventResponse,
-    UpdateEvent,
-    STATUS,
     ROLES,
+    STATUS,
+    CreateEventRequest,
+    EventResponse,
+    Participant,
+    UpdateEvent,
+    User,
 )
 
 
@@ -67,7 +67,9 @@ class EventService:
         """
 
         participants = await self.get_participants(event.id)
-        users = [participant for participant in participants if participant.id == user.id]
+        users = [
+            participant for participant in participants if participant.id == user.id
+        ]
         if not users:
             raise LookupError(f"User is not found for event {event.id}")
         if users[0].role not in {"ADMIN", "OWNER"}:

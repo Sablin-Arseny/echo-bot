@@ -18,12 +18,16 @@ from app.src.services.event import EventService
 
 from .common import ensure_user, require_event_member
 
-
 router = Router()
 MOSCOW = ZoneInfo("Europe/Moscow")
 
+
 def event_text(event) -> str:
-    start_date = event.start_date.astimezone(MOSCOW) if event.start_date.tzinfo else event.start_date
+    start_date = (
+        event.start_date.astimezone(MOSCOW)
+        if event.start_date.tzinfo
+        else event.start_date
+    )
     lines = [
         f"<b>{escape(event.name)}</b>",
         format_event_date(start_date),
@@ -38,7 +42,6 @@ def event_text(event) -> str:
 def format_event_date(value: datetime) -> str:
     pattern = "%d.%m.%Y" if value.time() == time.min else "%d.%m.%Y %H:%M"
     return value.strftime(pattern)
-
 
 
 @router.callback_query(F.data.startswith("event:view:"))
@@ -62,7 +65,9 @@ async def view_event(callback: CallbackQuery) -> None:
 async def create_event(callback: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
     await state.set_state(EventForm.name)
-    await callback.message.edit_text("Введите название события", reply_markup=cancel_menu())
+    await callback.message.edit_text(
+        "Введите название события", reply_markup=cancel_menu()
+    )
     await callback.answer()
 
 
@@ -73,7 +78,9 @@ async def event_name(message: Message, state: FSMContext) -> None:
         return
     await state.update_data(name=message.text.strip())
     await state.set_state(EventForm.description)
-    await message.answer("Введите описание", reply_markup=skip_menu("event_description"))
+    await message.answer(
+        "Введите описание", reply_markup=skip_menu("event_description")
+    )
 
 
 @router.message(EventForm.description)
@@ -110,7 +117,9 @@ def parse_event_date(value: str) -> datetime:
     raise ValueError("Используйте формат ДД.ММ.ГГГГ или ДД.ММ.ГГГГ ЧЧ:ММ.")
 
 
-async def ask_event_place(message: Message, state: FSMContext, edit: bool = False) -> None:
+async def ask_event_place(
+    message: Message, state: FSMContext, edit: bool = False
+) -> None:
     await state.set_state(EventForm.place)
     method = message.edit_text if edit else message.answer
     await method("Введите место", reply_markup=skip_menu("event_place"))
@@ -177,7 +186,9 @@ async def choose_calendar_hour(callback: CallbackQuery) -> None:
 @router.callback_query(EventForm.time, F.data == "calendar:no_time")
 async def choose_date_only(callback: CallbackQuery, state: FSMContext) -> None:
     data = await state.get_data()
-    start_date = datetime.combine(date.fromisoformat(data["selected_date"]), time.min, MOSCOW)
+    start_date = datetime.combine(
+        date.fromisoformat(data["selected_date"]), time.min, MOSCOW
+    )
     await state.update_data(start_date=start_date.isoformat())
     await ask_event_place(callback.message, state, edit=True)
     await callback.answer()
@@ -203,9 +214,7 @@ async def choose_calendar_time(callback: CallbackQuery, state: FSMContext) -> No
 @router.message(EventForm.time)
 async def type_calendar_time(message: Message, state: FSMContext) -> None:
     try:
-        selected_time = datetime.strptime(
-            (message.text or "").strip(), "%H:%M"
-        ).time()
+        selected_time = datetime.strptime((message.text or "").strip(), "%H:%M").time()
     except ValueError:
         await message.answer("Введите время в формате ЧЧ:ММ.")
         return
@@ -287,7 +296,9 @@ async def join_event(callback: CallbackQuery) -> None:
     user = await ensure_user(callback)
     service = EventService.get_as_dependency()
     participants = await service.get_participants(event_id)
-    current = next((participant for participant in participants if participant.id == user.id), None)
+    current = next(
+        (participant for participant in participants if participant.id == user.id), None
+    )
     if not current:
         await service.add_user_by_invite(event_id, user)
     await service.update_status_of_member(event_id, user, "PARTICIPATING")
@@ -303,9 +314,7 @@ async def invite_to_event(callback: CallbackQuery) -> None:
     event_id = int(callback.data.rsplit(":", 1)[1])
     user = await ensure_user(callback)
     await require_event_member(event_id, user)
-    link = await create_start_link(
-        callback.bot, invite_payload(event_id), encode=False
-    )
+    link = await create_start_link(callback.bot, invite_payload(event_id), encode=False)
     await callback.message.answer(f"Ссылка для приглашения:\n{link}")
     await callback.answer()
 

@@ -11,7 +11,6 @@ from app.src.schemas import ExpenseResponse, ParticipantResponse, User
 from app.src.services.event import EventService
 from app.src.services.expense import ExpenseService
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -47,7 +46,7 @@ def totals_by_creditor(
     for expense, participant in debts:
         creditor = expense.paid_by
         key = creditor.tg_id or str(creditor.id)
-        previous = creditors.get(key, (creditor, Decimal("0")))[1]
+        previous = creditors.get(key, (creditor, Decimal(0)))[1]
         creditors[key] = (
             creditor,
             previous + Decimal(str(participant.remaining_amount)),
@@ -72,7 +71,9 @@ async def collect_pending_confirmations(
     return pending
 
 
-async def notify_new_expense(bot: Bot, event_name: str, expense: ExpenseResponse) -> None:
+async def notify_new_expense(
+    bot: Bot, event_name: str, expense: ExpenseResponse
+) -> None:
     for participant in expense.participants:
         if participant.user.tg_id == expense.paid_by.tg_id:
             continue

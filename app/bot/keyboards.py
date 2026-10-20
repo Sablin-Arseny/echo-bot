@@ -16,7 +16,11 @@ def main_menu() -> InlineKeyboardMarkup:
                     text="Подтверждения", callback_data="menu:confirmations"
                 )
             ],
-            [InlineKeyboardButton(text="Создать событие", callback_data="event:create")],
+            [
+                InlineKeyboardButton(
+                    text="Создать событие", callback_data="event:create"
+                )
+            ],
         ]
     )
 
@@ -93,9 +97,7 @@ def participants_menu(
         tg_id = str(participant.tg_id)
         marker = "✓ " if tg_id in selected else ""
         label = participant.full_name or participant.username or tg_id
-        builder.button(
-            text=f"{marker}{label}", callback_data=f"member:toggle:{tg_id}"
-        )
+        builder.button(text=f"{marker}{label}", callback_data=f"member:toggle:{tg_id}")
     builder.adjust(1)
     builder.row(InlineKeyboardButton(text="Готово", callback_data="member:done"))
     builder.row(InlineKeyboardButton(text="Отмена", callback_data="form:cancel"))

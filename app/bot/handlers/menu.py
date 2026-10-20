@@ -15,8 +15,8 @@ from app.src.services.event import EventService
 from .common import ensure_user
 from .events import event_text
 
-
 router = Router()
+
 
 @router.message(CommandStart())
 async def start(message: Message, command: CommandObject) -> None:
@@ -90,7 +90,9 @@ async def list_events(callback: CallbackQuery) -> None:
     for event in events:
         builder.button(text=event.name, callback_data=f"event:view:{event.id}")
     builder.adjust(1)
-    builder.row(InlineKeyboardButton(text="Создать событие", callback_data="event:create"))
+    builder.row(
+        InlineKeyboardButton(text="Создать событие", callback_data="event:create")
+    )
     builder.row(InlineKeyboardButton(text="Главное меню", callback_data="menu:main"))
     text = "Ваши события:" if events else "У вас пока нет событий."
     await callback.message.edit_text(text, reply_markup=builder.as_markup())

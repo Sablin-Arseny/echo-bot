@@ -6,6 +6,7 @@ from app.src.db.user import UserDB
 from app.src.schemas import User
 from app.src.services.event import EventService
 
+
 def telegram_user(message_or_callback: Message | CallbackQuery):
     return message_or_callback.from_user
 
@@ -22,9 +23,7 @@ async def ensure_user(message_or_callback: Message | CallbackQuery) -> User:
     )
     if not stored:
         stored = await user_db.create(profile)
-    elif (
-        stored.username != profile.username or stored.full_name != profile.full_name
-    ):
+    elif stored.username != profile.username or stored.full_name != profile.full_name:
         stored = await user_db.update(User(id=stored.id), profile)
     return User.model_validate(stored)
 

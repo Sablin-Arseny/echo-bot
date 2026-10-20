@@ -1,6 +1,6 @@
 from functools import cache
 
-from sqlalchemy import select, update, func
+from sqlalchemy import func, select, update
 
 from app.src.db.core import BaseDB
 from app.src.models import Expense, ExpenseParticipant, User
@@ -40,9 +40,7 @@ class ExpenseDB(BaseDB):
             result = await session.execute(stmt)
             return result.scalar_one_or_none()
 
-    async def get_expense_participants(
-        self, expense_id
-    ) -> list[ExpenseParticipant]:
+    async def get_expense_participants(self, expense_id) -> list[ExpenseParticipant]:
         """Returns participants for the selected expense.
 
         Loads every participant share linked to the expense.
@@ -118,9 +116,7 @@ class ExpenseDB(BaseDB):
         Persists the status and returns the updated expense.
         """
 
-        stmt = (
-            update(Expense).where(Expense.id == expense_id).values(status=status)
-        )
+        stmt = update(Expense).where(Expense.id == expense_id).values(status=status)
         async with self.create_session() as session:
             await session.execute(stmt)
             await session.commit()

@@ -1,6 +1,6 @@
-from pydantic import BaseModel, ConfigDict
 from typing import Literal
 
+from pydantic import BaseModel, ConfigDict
 
 STATUS = Literal[
     "INVITED",

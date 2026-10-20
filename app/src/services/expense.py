@@ -1,17 +1,17 @@
+from decimal import ROUND_DOWN, Decimal
 from functools import cache
-from decimal import Decimal, ROUND_DOWN
 
 from app.src.db.expense import ExpenseDB
 from app.src.db.user import UserDB
 from app.src.schemas import (
-    ExpenseResponse,
-    User,
+    ConfirmPaymentRequest,
     CreateExpenseRequest,
+    ExpenseResponse,
+    MarkParticipantPaidRequest,
+    ParticipantResponse,
+    User,
     UserExpenseResponse,
     UserTotalExpenseResponse,
-    MarkParticipantPaidRequest,
-    ConfirmPaymentRequest,
-    ParticipantResponse,
 )
 
 
@@ -217,8 +217,7 @@ class ExpenseService:
         if paid_amount is None or paid_amount <= 0:
             raise ValueError("Payment amount must be positive")
 
-        if paid_amount > expense_participant.share_amount:
-            paid_amount = expense_participant.share_amount
+        paid_amount = min(paid_amount, expense_participant.share_amount)
 
         await self._expense_db.mark_participant_paid(
             expense_participant.id, paid_amount
@@ -335,9 +334,7 @@ class ExpenseService:
 
         return await self._build_expense_response(expense)
 
-    async def delete_expense(
-        self, expense_id: int, paid_by: User
-    ) -> ExpenseResponse:
+    async def delete_expense(self, expense_id: int, paid_by: User) -> ExpenseResponse:
         """Marks an expense as deleted.
 
         Allows deletion only for the expense creator.

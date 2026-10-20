@@ -5,7 +5,6 @@ from aiogram.types import ErrorEvent
 
 from . import events, expenses, menu, payments
 
-
 router = Router()
 router.message.filter(F.chat.type == "private")
 router.callback_query.filter(F.message.chat.type == "private")

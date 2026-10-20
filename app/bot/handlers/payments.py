@@ -18,8 +18,8 @@ from app.src.services.expense import ExpenseService
 
 from .common import ensure_user, require_event_member
 
-
 router = Router()
+
 
 @router.callback_query(F.data == "menu:debts")
 async def user_debts(callback: CallbackQuery) -> None:
@@ -27,7 +27,7 @@ async def user_debts(callback: CallbackQuery) -> None:
     debts = await collect_debts(user)
     total = sum(
         (Decimal(str(participant.remaining_amount)) for _, participant in debts),
-        Decimal("0"),
+        Decimal(0),
     )
     builder = InlineKeyboardBuilder()
     lines = [f"💳 Всего должны: {total:.2f}", ""]
@@ -85,7 +85,7 @@ async def user_confirmations(callback: CallbackQuery) -> None:
     pending = await collect_pending_confirmations(user)
     total = sum(
         (Decimal(str(participant.share_amount)) for _, participant in pending),
-        Decimal("0"),
+        Decimal(0),
     )
     lines = [f"✅ Ожидают подтверждения: {len(pending)}", f"Сумма: {total:.2f}"]
     if pending:
@@ -118,7 +118,7 @@ async def preview_all_confirmations(callback: CallbackQuery) -> None:
         return
     total = sum(
         (Decimal(str(participant.share_amount)) for _, participant in pending),
-        Decimal("0"),
+        Decimal(0),
     )
     builder = InlineKeyboardBuilder()
     builder.button(text="Подтвердить", callback_data="payment:confirm_all:confirm")
