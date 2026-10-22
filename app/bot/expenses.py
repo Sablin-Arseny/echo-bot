@@ -4,8 +4,6 @@ from html import escape
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import InlineKeyboardButton
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.src.schemas import ExpenseResponse, ParticipantResponse, User
 from app.src.services.event import EventService
@@ -77,10 +75,6 @@ async def notify_new_expense(
     for participant in expense.participants:
         if participant.user.tg_id == expense.paid_by.tg_id:
             continue
-        builder = InlineKeyboardBuilder()
-        builder.button(
-            text="Открыть расход", callback_data=f"expense:view:{expense.id}"
-        )
         try:
             await bot.send_message(
                 chat_id=participant.user.tg_id,
@@ -90,7 +84,6 @@ async def notify_new_expense(
                     f"Ваша доля: {participant.share_amount:.2f}. "
                     f"Оплатил: {escape(display_name(expense.paid_by))}."
                 ),
-                reply_markup=builder.as_markup(),
             )
         except TelegramAPIError:
             logger.warning(
@@ -107,20 +100,6 @@ async def notify_payment(
     payer: User,
     participant: ParticipantResponse,
 ) -> None:
-    builder = InlineKeyboardBuilder()
-    if participant.status == "PAID":
-        builder.row(
-            InlineKeyboardButton(
-                text="Подтвердить оплату",
-                callback_data=f"payment:confirm:{expense.id}:{payer.tg_id}",
-            )
-        )
-        builder.row(
-            InlineKeyboardButton(
-                text="Подтвердить все оплаты",
-                callback_data="payment:confirm_all:preview",
-            )
-        )
     try:
         await bot.send_message(
             chat_id=expense.paid_by.tg_id,
@@ -129,7 +108,6 @@ async def notify_payment(
                 f"{participant.paid_amount:.2f} по расходу "
                 f"«{escape(expense.description or str(expense.id))}»."
             ),
-            reply_markup=builder.as_markup() if participant.status == "PAID" else None,
         )
     except TelegramAPIError:
         logger.warning(
