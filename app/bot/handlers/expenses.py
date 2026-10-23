@@ -56,7 +56,8 @@ def expense_text(expense) -> str:
 async def event_expenses(callback: CallbackQuery) -> None:
     event_id = int(callback.data.rsplit(":", 1)[1])
     user = await ensure_user(callback)
-    await require_event_member(event_id, user)
+    await require_event_member(event_id, user, allow_removed=True)
+    event = await EventService.get_as_dependency().get(event_id)
     expenses = [
         expense
         async for expense in ExpenseService.get_as_dependency().get(event_id)
@@ -72,11 +73,16 @@ async def event_expenses(callback: CallbackQuery) -> None:
             callback_data=f"expense:view:{expense.id}",
         )
     builder.adjust(1)
-    builder.row(
-        InlineKeyboardButton(
-            text="Добавить расход", callback_data=f"expense:create:{event_id}"
-        )
+    members = await EventService.get_as_dependency().get_participants(event_id)
+    active_member = any(
+        p.id == user.id and p.status == "PARTICIPATING" for p in members
     )
+    if not event.finished_at and active_member:
+        builder.row(
+            InlineKeyboardButton(
+                text="Добавить расход", callback_data=f"expense:create:{event_id}"
+            )
+        )
     builder.row(
         InlineKeyboardButton(text="Назад", callback_data=f"event:view:{event_id}")
     )
@@ -92,7 +98,8 @@ async def view_expense(callback: CallbackQuery) -> None:
     expense_id = int(callback.data.rsplit(":", 1)[1])
     expense = await ExpenseService.get_as_dependency().get_expense_detail(expense_id)
     user = await ensure_user(callback)
-    await require_event_member(expense.event_id, user)
+    await require_event_member(expense.event_id, user, allow_removed=True)
+    event = await EventService.get_as_dependency().get(expense.event_id)
     builder = InlineKeyboardBuilder()
     participant = next(
         (item for item in expense.participants if item.user.tg_id == user.tg_id), None
@@ -109,9 +116,10 @@ async def view_expense(callback: CallbackQuery) -> None:
                     text=f"Подтвердить: {name}",
                     callback_data=f"payment:confirm:{expense_id}:{item.user.tg_id}",
                 )
-        builder.button(
-            text="Удалить расход", callback_data=f"expense:delete:{expense_id}"
-        )
+        if not event.finished_at:
+            builder.button(
+                text="Удалить расход", callback_data=f"expense:delete:{expense_id}"
+            )
     builder.adjust(1)
     builder.row(
         InlineKeyboardButton(
@@ -129,6 +137,7 @@ async def create_expense(callback: CallbackQuery, state: FSMContext) -> None:
     event_id = int(callback.data.rsplit(":", 1)[1])
     user = await ensure_user(callback)
     await require_event_member(event_id, user)
+    await EventService.get_as_dependency().require_active(event_id)
     await state.clear()
     await state.update_data(event_id=event_id)
     await state.set_state(ExpenseForm.description)

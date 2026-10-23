@@ -28,10 +28,14 @@ async def ensure_user(message_or_callback: Message | CallbackQuery) -> User:
     return User.model_validate(stored)
 
 
-async def require_event_member(event_id: int, user: User) -> None:
+async def require_event_member(
+    event_id: int, user: User, allow_removed: bool = False
+) -> None:
     participants = await EventService.get_as_dependency().get_participants(event_id)
     if not any(
-        participant.id == user.id and participant.status == "PARTICIPATING"
+        participant.id == user.id
+        and participant.status
+        in ({"PARTICIPATING", "DELETED"} if allow_removed else {"PARTICIPATING"})
         for participant in participants
     ):
         raise PermissionError("Вы не участвуете в этом событии")

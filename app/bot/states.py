@@ -17,3 +17,8 @@ class ExpenseForm(StatesGroup):
     participants = State()
     manual_shares = State()
     confirmation = State()
+
+
+class EventEditForm(StatesGroup):
+    value = State()
+    confirmation = State()

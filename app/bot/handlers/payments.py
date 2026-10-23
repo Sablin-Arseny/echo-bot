@@ -181,7 +181,7 @@ async def create_payment(callback: CallbackQuery) -> None:
     user = await ensure_user(callback)
     service = ExpenseService.get_as_dependency()
     expense = await service.get_expense_detail(expense_id)
-    await require_event_member(expense.event_id, user)
+    await require_event_member(expense.event_id, user, allow_removed=True)
     debt = next(
         (item for item in expense.participants if item.user.tg_id == user.tg_id),
         None,

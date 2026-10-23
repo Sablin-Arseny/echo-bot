@@ -21,12 +21,40 @@ def main_menu() -> InlineKeyboardMarkup:
                     text="Создать событие", callback_data="event:create"
                 )
             ],
+            [
+                InlineKeyboardButton(
+                    text="🗂 Архив событий", callback_data="menu:archive"
+                )
+            ],
         ]
     )
 
 
-def event_menu(event_id: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+def event_menu(
+    event_id: int, finished: bool = False, owner: bool = False, member: bool = True
+) -> InlineKeyboardMarkup:
+    if finished or not member:
+        return InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="💰 Расходы", callback_data=f"event:expenses:{event_id}"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="👥 Участники", callback_data=f"event:members:{event_id}"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="Назад",
+                        callback_data="menu:archive" if finished else "menu:events",
+                    )
+                ],
+            ]
+        )
+    markup = InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
@@ -49,6 +77,19 @@ def event_menu(event_id: int) -> InlineKeyboardMarkup:
             ],
         ]
     )
+    if owner:
+        markup.inline_keyboard.insert(
+            -1,
+            [
+                InlineKeyboardButton(
+                    text="Редактировать событие", callback_data=f"event:edit:{event_id}"
+                ),
+                InlineKeyboardButton(
+                    text="Завершить событие", callback_data=f"event:finish:{event_id}"
+                ),
+            ],
+        )
+    return markup
 
 
 def cancel_menu() -> InlineKeyboardMarkup:

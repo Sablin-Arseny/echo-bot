@@ -24,6 +24,7 @@ class EventResponse(BaseModel):
     description: str | None = None
     start_date: datetime
     cancel_of_event_date: datetime | None = None
+    finished_at: datetime | None = None
     created_at: datetime
     tg_chat: str | None = None
     event_place: str | None = None
