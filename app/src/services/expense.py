@@ -50,7 +50,7 @@ class ExpenseService:
         user = User.model_validate(user_orm)
 
         if participant.status == "CONFIRMED":
-            remaining = 0.0
+            remaining = Decimal(0)
             paid_amount = participant.share_amount
         else:
             remaining = round(participant.share_amount - participant.paid_amount, 2)
@@ -97,6 +97,33 @@ class ExpenseService:
         Supports equal division or individually specified amounts.
         """
 
+        return await self._save_expense(expense_request, paid_by)
+
+    async def require_editable(self, expense_id: int, user: User):
+        """Requires authorship and no participant payments."""
+        expense = await self.get_expense_detail(expense_id)
+        if expense.paid_by.id != user.id:
+            raise PermissionError("Изменять расход может только его автор")
+        await EventService.get_as_dependency().require_active(expense.event_id)
+        if expense.status in {"DELETED", "CLOSED"}:
+            raise ValueError("Закрытый или удалённый расход нельзя редактировать")
+        if any(
+            p.user.id != user.id and p.paid_amount > 0 for p in expense.participants
+        ):
+            raise ValueError(
+                "После оплаты расход нельзя редактировать. Доступно удаление"
+            )
+        return expense
+
+    async def update_expense(
+        self, expense_id: int, request: CreateExpenseRequest, user: User
+    ):
+        """Updates an unpaid expense by its author."""
+        await self.require_editable(expense_id, user)
+        return await self._save_expense(request, user, expense_id)
+
+    async def _save_expense(self, expense_request, paid_by, expense_id=None):
+
         await EventService.get_as_dependency().require_active(expense_request.event_id)
         members = await EventService.get_as_dependency().get_participants(
             expense_request.event_id
@@ -136,8 +163,7 @@ class ExpenseService:
             "amount": total_amount,
             "description": expense_request.description,
         }
-        expense_orm = await self._expense_db.create_expense(expense_data)
-
+        shares = []
         if expense_request.is_equally:
             total = Decimal(str(total_amount)).quantize(Decimal("0.01"))
             participant_count = len(expense_request.participants)
@@ -148,13 +174,12 @@ class ExpenseService:
 
             for index, participant_request in enumerate(expense_request.participants):
                 user_orm = participants_map[participant_request.tg_id]
-                share_amount = float(
-                    base_share + (Decimal("0.01") if index < remainder else 0)
+                share_amount = base_share + (
+                    Decimal("0.01") if index < remainder else 0
                 )
 
                 if user_orm.id == paid_by_user_orm.id:
                     participant_data = {
-                        "expense_id": expense_orm.id,
                         "participant_id": user_orm.id,
                         "share_amount": share_amount,
                         "paid_amount": share_amount,
@@ -162,11 +187,10 @@ class ExpenseService:
                     }
                 else:
                     participant_data = {
-                        "expense_id": expense_orm.id,
                         "participant_id": user_orm.id,
                         "share_amount": share_amount,
                     }
-                await self._expense_db.create_expense_participant(participant_data)
+                shares.append(participant_data)
         else:
             for participant_request in expense_request.participants:
                 user_orm = participants_map[participant_request.tg_id]
@@ -174,7 +198,6 @@ class ExpenseService:
 
                 if user_orm.id == paid_by_user_orm.id:
                     participant_data = {
-                        "expense_id": expense_orm.id,
                         "participant_id": user_orm.id,
                         "share_amount": share_amount,
                         "paid_amount": share_amount,
@@ -182,15 +205,13 @@ class ExpenseService:
                     }
                 else:
                     participant_data = {
-                        "expense_id": expense_orm.id,
                         "participant_id": user_orm.id,
                         "share_amount": share_amount,
                     }
-                await self._expense_db.create_expense_participant(participant_data)
+                shares.append(participant_data)
 
-        await self._expense_db.recalculate_expense_status(expense_orm.id)
-
-        return await self.get_expense_detail(expense_orm.id)
+        saved_id = await self._expense_db.save_expense(expense_data, shares, expense_id)
+        return await self.get_expense_detail(saved_id)
 
     async def mark_participant_paid(
         self, request: MarkParticipantPaidRequest, current_user: User
@@ -204,8 +225,8 @@ class ExpenseService:
         if not expense:
             raise ValueError(f"Expense with id {request.expense_id} not found")
 
-        if expense.status == "CLOSED":
-            raise ValueError("Expense is already closed")
+        if expense.status in {"CLOSED", "DELETED"}:
+            raise ValueError("Расход закрыт или удалён")
 
         participant_orm = await self._user_db.get(User(tg_id=current_user.tg_id))
         if not participant_orm:
@@ -232,10 +253,8 @@ class ExpenseService:
         paid_amount = min(paid_amount, expense_participant.share_amount)
 
         await self._expense_db.mark_participant_paid(
-            expense_participant.id, paid_amount
+            expense_participant.id, paid_amount, current_user_orm.id
         )
-
-        await self._expense_db.recalculate_expense_status(request.expense_id)
 
         updated_participant = await self._expense_db.get_expense_participant(
             request.expense_id, participant_orm.id
@@ -257,8 +276,8 @@ class ExpenseService:
         if not expense:
             raise ValueError(f"Expense with id {request.expense_id} not found")
 
-        if expense.status == "CLOSED":
-            raise ValueError("Expense is already closed")
+        if expense.status in {"CLOSED", "DELETED"}:
+            raise ValueError("Расход закрыт или удалён")
 
         current_user_orm = await self._user_db.get(User(tg_id=current_user.tg_id))
         if current_user_orm.id != expense.paid_by_id:
@@ -284,9 +303,9 @@ class ExpenseService:
                 f"Full payment required for confirmation."
             )
 
-        await self._expense_db.confirm_participant_payment(expense_participant.id)
-
-        await self._expense_db.recalculate_expense_status(request.expense_id)
+        await self._expense_db.confirm_participant_payment(
+            expense_participant.id, current_user_orm.id
+        )
 
         updated_participant = await self._expense_db.get_expense_participant(
             request.expense_id, participant_orm.id
@@ -361,6 +380,6 @@ class ExpenseService:
 
         await EventService.get_as_dependency().require_active(expense.event_id)
 
-        await self._expense_db.update_expense_status(expense_id, "DELETED")
+        await self._expense_db.delete_expense(expense_id, paid_by.id)
 
         return await self.get_expense_detail(expense_id)

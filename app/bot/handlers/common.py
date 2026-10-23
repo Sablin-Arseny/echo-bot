@@ -46,6 +46,8 @@ def parse_amount(value: str) -> Decimal:
         amount = Decimal(value.replace(",", ".").strip()).quantize(Decimal("0.01"))
     except InvalidOperation as error:
         raise ValueError("Введите сумму числом") from error
-    if amount <= 0:
+    if not amount.is_finite() or amount <= 0:
         raise ValueError("Сумма должна быть больше нуля")
+    if amount >= Decimal(10000000000000000):
+        raise ValueError("Сумма слишком велика")
     return amount

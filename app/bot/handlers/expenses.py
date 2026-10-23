@@ -53,17 +53,25 @@ def expense_text(expense) -> str:
 
 
 @router.callback_query(F.data.startswith("event:expenses:"))
+@router.callback_query(F.data.startswith("event:expense_archive:"))
 async def event_expenses(callback: CallbackQuery) -> None:
     event_id = int(callback.data.rsplit(":", 1)[1])
     user = await ensure_user(callback)
     await require_event_member(event_id, user, allow_removed=True)
     event = await EventService.get_as_dependency().get(event_id)
-    expenses = [
+    archived = callback.data.startswith("event:expense_archive:")
+    all_expenses = [
         expense
         async for expense in ExpenseService.get_as_dependency().get(event_id)
         if expense.status != "DELETED"
     ]
-    total = sum((Decimal(str(expense.amount)) for expense in expenses), Decimal(0))
+    expenses = [
+        expense for expense in all_expenses if (expense.status == "CLOSED") == archived
+    ]
+    total = sum((Decimal(str(expense.amount)) for expense in all_expenses), Decimal(0))
+    visible_total = sum(
+        (Decimal(str(expense.amount)) for expense in expenses), Decimal(0)
+    )
     builder = InlineKeyboardBuilder()
     for expense in expenses:
         label = expense.description or f"Расход #{expense.id}"
@@ -77,18 +85,35 @@ async def event_expenses(callback: CallbackQuery) -> None:
     active_member = any(
         p.id == user.id and p.status == "PARTICIPATING" for p in members
     )
-    if not event.finished_at and active_member:
+    if not event.finished_at and active_member and not archived:
         builder.row(
             InlineKeyboardButton(
                 text="Добавить расход", callback_data=f"expense:create:{event_id}"
             )
         )
+    if not archived:
+        builder.row(
+            InlineKeyboardButton(
+                text="🗂 Архив расходов",
+                callback_data=f"event:expense_archive:{event_id}",
+            )
+        )
     builder.row(
-        InlineKeyboardButton(text="Назад", callback_data=f"event:view:{event_id}")
+        InlineKeyboardButton(
+            text="Назад",
+            callback_data=(
+                f"event:expenses:{event_id}" if archived else f"event:view:{event_id}"
+            ),
+        )
     )
-    text = f"💰 Расходы события\nВсего: {total:.2f}"
+    text = "🗂 Архив расходов" if archived else "💰 Расходы события"
+    text += f"\n{'Закрытые' if archived else 'Открытые'} расходы: {visible_total:.2f}\nВсего по событию: {total:.2f}"
     if not expenses:
-        text += "\n\nРасходов пока нет."
+        text += (
+            "\n\nЗакрытых расходов пока нет."
+            if archived
+            else "\n\nОткрытых расходов нет."
+        )
     await callback.message.edit_text(text, reply_markup=builder.as_markup())
     await callback.answer()
 
@@ -100,34 +125,68 @@ async def view_expense(callback: CallbackQuery) -> None:
     user = await ensure_user(callback)
     await require_event_member(expense.event_id, user, allow_removed=True)
     event = await EventService.get_as_dependency().get(expense.event_id)
+    members = await EventService.get_as_dependency().get_participants(expense.event_id)
+    active_member = any(
+        p.id == user.id and p.status == "PARTICIPATING" for p in members
+    )
     builder = InlineKeyboardBuilder()
     participant = next(
         (item for item in expense.participants if item.user.tg_id == user.tg_id), None
     )
-    if participant and participant.remaining_amount > 0:
+    if participant and participant.remaining_amount > 0 and expense.status != "DELETED":
         builder.button(
             text="Отметить оплату", callback_data=f"payment:create:{expense_id}"
         )
     if expense.paid_by.id == user.id:
         for item in expense.participants:
-            if item.status == "PAID":
+            if item.status == "PAID" and expense.status != "DELETED":
                 name = item.user.full_name or item.user.username or item.user.tg_id
                 builder.button(
                     text=f"Подтвердить: {name}",
                     callback_data=f"payment:confirm:{expense_id}:{item.user.tg_id}",
                 )
-        if not event.finished_at:
+        if not event.finished_at and active_member and expense.status != "DELETED":
+            if expense.status != "CLOSED" and not any(
+                p.user.id != user.id and p.paid_amount > 0 for p in expense.participants
+            ):
+                builder.button(
+                    text="Редактировать расход",
+                    callback_data=f"expense:edit:{expense_id}",
+                )
             builder.button(
                 text="Удалить расход", callback_data=f"expense:delete:{expense_id}"
             )
     builder.adjust(1)
     builder.row(
         InlineKeyboardButton(
-            text="Назад", callback_data=f"event:expenses:{expense.event_id}"
+            text="Назад",
+            callback_data=(
+                f"event:expense_archive:{expense.event_id}"
+                if expense.status == "CLOSED"
+                else f"event:expenses:{expense.event_id}"
+            ),
         )
     )
     await callback.message.edit_text(
         expense_text(expense), reply_markup=builder.as_markup()
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("expense:edit:"))
+async def edit_expense(callback: CallbackQuery, state: FSMContext) -> None:
+    expense_id = int(callback.data.rsplit(":", 1)[1])
+    user = await ensure_user(callback)
+    expense = await ExpenseService.get_as_dependency().require_editable(
+        expense_id, user
+    )
+    await require_event_member(expense.event_id, user)
+    await state.clear()
+    await state.update_data(event_id=expense.event_id, expense_id=expense_id)
+    await state.set_state(ExpenseForm.description)
+    await callback.message.edit_text(
+        f"Текущий расход\n\n{expense_text(expense)}\n\nВведите новое описание расхода",
+        reply_markup=cancel_menu(),
     )
     await callback.answer()
 
@@ -315,32 +374,59 @@ async def save_expense(callback: CallbackQuery, state: FSMContext) -> None:
     else:
         expense_participants = [
             ExpenseParticipantRequest(
-                tg_id=item["tg_id"], share_amount=float(data["shares"][item["tg_id"]])
+                tg_id=item["tg_id"], share_amount=Decimal(data["shares"][item["tg_id"]])
             )
             for item in participants
         ]
     request = CreateExpenseRequest(
         event_id=data["event_id"],
-        amount=float(data["amount"]),
+        amount=Decimal(data["amount"]),
         is_equally=data["mode"] == "equal",
         description=data["description"],
         participants=expense_participants,
     )
     user = await ensure_user(callback)
     await require_event_member(data["event_id"], user)
-    expense = await ExpenseService.get_as_dependency().create_expense_with_participants(
-        request, user
-    )
+    service = ExpenseService.get_as_dependency()
+    if data.get("expense_id"):
+        expense = await service.update_expense(data["expense_id"], request, user)
+    else:
+        expense = await service.create_expense_with_participants(request, user)
     await state.clear()
     await callback.message.edit_text(
         expense_text(expense), reply_markup=event_menu(expense.event_id)
     )
     await callback.answer()
     event = await EventService.get_as_dependency().get(expense.event_id)
-    await notify_new_expense(callback.bot, event.name, expense)
+    await notify_new_expense(
+        callback.bot, event.name, expense, edited=bool(data.get("expense_id"))
+    )
 
 
 @router.callback_query(F.data.startswith("expense:delete:"))
+async def preview_delete_expense(callback: CallbackQuery) -> None:
+    expense_id = int(callback.data.rsplit(":", 1)[1])
+    user = await ensure_user(callback)
+    expense = await ExpenseService.get_as_dependency().get_expense_detail(expense_id)
+    if expense.paid_by.id != user.id:
+        raise PermissionError("Удалять расход может только его автор")
+    await require_event_member(expense.event_id, user)
+    await EventService.get_as_dependency().require_active(expense.event_id)
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text="Удалить расход", callback_data=f"expense:delete_confirm:{expense_id}"
+    )
+    builder.button(text="Назад", callback_data=f"expense:view:{expense_id}")
+    builder.adjust(1)
+    await callback.message.edit_text(
+        f"Удалить расход «{escape(expense.description or 'Расход')}» на {expense.amount:.2f}?\n\n"
+        "Он будет исключён из списка расходов и расчёта долгов. Уже выполненные переводы не возвращаются.",
+        reply_markup=builder.as_markup(),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("expense:delete_confirm:"))
 async def delete_expense(callback: CallbackQuery) -> None:
     expense_id = int(callback.data.rsplit(":", 1)[1])
     user = await ensure_user(callback)
