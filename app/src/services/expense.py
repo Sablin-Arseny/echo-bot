@@ -107,6 +107,8 @@ class ExpenseService:
         await EventService.get_as_dependency().require_active(expense.event_id)
         if expense.status in {"DELETED", "CLOSED"}:
             raise ValueError("Закрытый или удалённый расход нельзя редактировать")
+        if await self.has_pending_settlement(expense_id):
+            raise ValueError("Сначала подтвердите или отмените взаиморасчёт по расходу")
         if any(
             p.user.id != user.id and p.paid_amount > 0 for p in expense.participants
         ):
@@ -114,6 +116,12 @@ class ExpenseService:
                 "После оплаты расход нельзя редактировать. Доступно удаление"
             )
         return expense
+
+    async def has_pending_settlement(
+        self, expense_id: int, participant_id: int | None = None
+    ):
+        """Checks pending reservations for expense shares."""
+        return await self._expense_db.has_pending_settlement(expense_id, participant_id)
 
     async def update_expense(
         self, expense_id: int, request: CreateExpenseRequest, user: User

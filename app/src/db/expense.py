@@ -4,6 +4,7 @@ from functools import cache
 from sqlalchemy import delete, func, select, update
 
 from app.src.db.core import BaseDB
+from app.src.db.settlement import pending_settlements
 from app.src.models import Event, EventMember, Expense, ExpenseParticipant, User
 
 
@@ -74,6 +75,10 @@ class ExpenseDB(BaseDB):
                     raise ValueError(
                         "Закрытый или удалённый расход нельзя редактировать"
                     )
+                if await pending_settlements(session, expense.id):
+                    raise ValueError(
+                        "Сначала подтвердите или отмените взаиморасчёт по расходу"
+                    )
                 existing = (
                     await session.scalars(
                         select(ExpenseParticipant)
@@ -108,6 +113,13 @@ class ExpenseDB(BaseDB):
             await session.flush()
             return expense.id
 
+    async def has_pending_settlement(
+        self, expense_id: int, participant_id: int | None = None
+    ):
+        """Checks whether a pending settlement reserves shares."""
+        async with self.create_session() as session:
+            return bool(await pending_settlements(session, expense_id, participant_id))
+
     async def delete_expense(self, expense_id: int, author_id: int):
         """Deletes an author's active-event expense."""
         async with self.create_session() as session:
@@ -129,6 +141,8 @@ class ExpenseDB(BaseDB):
             if event.finished_at:
                 raise ValueError("Расходы завершённого события изменять нельзя")
             await session.refresh(expense)
+            for settlement in await pending_settlements(session, expense.id):
+                settlement.status = "CANCELLED"
             expense.status = "DELETED"
 
     async def get_expense_by_id(self, expense_id: int) -> Expense | None:
@@ -286,6 +300,10 @@ class ExpenseDB(BaseDB):
         )
         if not participant or expense.status in {"CLOSED", "DELETED"}:
             raise ValueError("Расход изменён, закрыт или удалён")
+        if await pending_settlements(session, expense.id, participant.participant_id):
+            raise ValueError(
+                "Оплата включена во взаиморасчёт. Откройте раздел взаиморасчётов"
+            )
         return participant, expense
 
     async def _recalculate(self, session, expense):
