@@ -38,6 +38,12 @@ def event_menu(
             inline_keyboard=[
                 [
                     InlineKeyboardButton(
+                        text="💱 Взаиморасчёты",
+                        callback_data=f"event:settlements:{event_id}",
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
                         text="💰 Расходы", callback_data=f"event:expenses:{event_id}"
                     )
                 ],
@@ -89,6 +95,14 @@ def event_menu(
                 ),
             ],
         )
+    markup.inline_keyboard.insert(
+        1,
+        [
+            InlineKeyboardButton(
+                text="💱 Взаиморасчёты", callback_data=f"event:settlements:{event_id}"
+            )
+        ],
+    )
     return markup
 
 

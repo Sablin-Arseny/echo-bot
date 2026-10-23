@@ -19,18 +19,28 @@ from app.bot.states import ExpenseForm
 from app.src.schemas import CreateExpenseRequest, ExpenseParticipantRequest
 from app.src.services.event import EventService
 from app.src.services.expense import ExpenseService
+from app.src.services.settlement import SettlementService
 
 from .common import ensure_user, parse_amount, require_event_member
+from .settlements import notify_settlement
 
 router = Router()
 
 
 def expense_text(expense) -> str:
+    status = EXPENSE_STATUS[expense.status]
+    if (
+        expense.status != "DELETED"
+        and expense.participants
+        and all(p.status in {"PAID", "CONFIRMED"} for p in expense.participants)
+        and any(p.status == "PAID" for p in expense.participants)
+    ):
+        status = "Ожидает подтверждения оплат"
     lines = [
         f"<b>{escape(expense.description or 'Расход')}</b>",
         f"Сумма: {expense.amount:.2f}",
         f"Оплатил: {escape(expense.paid_by.full_name or expense.paid_by.username or expense.paid_by.tg_id)}",
-        f"Статус: {EXPENSE_STATUS[expense.status]}",
+        f"Статус: {status}",
         "",
     ]
     for participant in expense.participants:
@@ -133,7 +143,21 @@ async def view_expense(callback: CallbackQuery) -> None:
     participant = next(
         (item for item in expense.participants if item.user.tg_id == user.tg_id), None
     )
-    if participant and participant.remaining_amount > 0 and expense.status != "DELETED":
+    reserved = await ExpenseService.get_as_dependency().has_pending_settlement(
+        expense_id
+    )
+    own_reserved = (
+        reserved
+        and await ExpenseService.get_as_dependency().has_pending_settlement(
+            expense_id, user.id
+        )
+    )
+    if (
+        participant
+        and participant.remaining_amount > 0
+        and expense.status != "DELETED"
+        and not own_reserved
+    ):
         builder.button(
             text="Отметить оплату", callback_data=f"payment:create:{expense_id}"
         )
@@ -146,8 +170,13 @@ async def view_expense(callback: CallbackQuery) -> None:
                     callback_data=f"payment:confirm:{expense_id}:{item.user.tg_id}",
                 )
         if not event.finished_at and active_member and expense.status != "DELETED":
-            if expense.status != "CLOSED" and not any(
-                p.user.id != user.id and p.paid_amount > 0 for p in expense.participants
+            if (
+                not reserved
+                and expense.status != "CLOSED"
+                and not any(
+                    p.user.id != user.id and p.paid_amount > 0
+                    for p in expense.participants
+                )
             ):
                 builder.button(
                     text="Редактировать расход",
@@ -159,6 +188,12 @@ async def view_expense(callback: CallbackQuery) -> None:
     builder.adjust(1)
     builder.row(
         InlineKeyboardButton(
+            text="💱 Взаиморасчёты",
+            callback_data=f"event:settlements:{expense.event_id}",
+        )
+    )
+    builder.row(
+        InlineKeyboardButton(
             text="Назад",
             callback_data=(
                 f"event:expense_archive:{expense.event_id}"
@@ -168,7 +203,13 @@ async def view_expense(callback: CallbackQuery) -> None:
         )
     )
     await callback.message.edit_text(
-        expense_text(expense), reply_markup=builder.as_markup()
+        expense_text(expense)
+        + (
+            "\n\n💱 Есть доли во взаиморасчёте, ожидающем подтверждения."
+            if reserved
+            else ""
+        ),
+        reply_markup=builder.as_markup(),
     )
     await callback.answer()
 
@@ -420,7 +461,8 @@ async def preview_delete_expense(callback: CallbackQuery) -> None:
     builder.adjust(1)
     await callback.message.edit_text(
         f"Удалить расход «{escape(expense.description or 'Расход')}» на {expense.amount:.2f}?\n\n"
-        "Он будет исключён из списка расходов и расчёта долгов. Уже выполненные переводы не возвращаются.",
+        "Он будет исключён из списка расходов и расчёта долгов. "
+        "Связанные неподтверждённые взаиморасчёты отменятся. Уже выполненные переводы не возвращаются.",
         reply_markup=builder.as_markup(),
     )
     await callback.answer()
@@ -430,8 +472,23 @@ async def preview_delete_expense(callback: CallbackQuery) -> None:
 async def delete_expense(callback: CallbackQuery) -> None:
     expense_id = int(callback.data.rsplit(":", 1)[1])
     user = await ensure_user(callback)
+    service = SettlementService.get_as_dependency()
+    before = {s.id for s in await service.history(user) if s.status == "PENDING"}
     expense = await ExpenseService.get_as_dependency().delete_expense(expense_id, user)
     await callback.message.edit_text(
         "Расход удалён.", reply_markup=event_menu(expense.event_id)
     )
     await callback.answer()
+    for settlement in await service.history(user, event_id=expense.event_id):
+        if settlement.id in before and settlement.status == "CANCELLED":
+            other = (
+                settlement.recipient
+                if settlement.payer.id == user.id
+                else settlement.payer
+            )
+            await notify_settlement(
+                callback.bot,
+                settlement,
+                "Расчёт отменён из-за удаления исходного расхода. Проверьте долги перед новым переводом.",
+                other.tg_id,
+            )
