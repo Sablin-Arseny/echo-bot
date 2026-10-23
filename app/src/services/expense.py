@@ -13,6 +13,7 @@ from app.src.schemas import (
     UserExpenseResponse,
     UserTotalExpenseResponse,
 )
+from app.src.services.event import EventService
 
 
 class ExpenseService:
@@ -96,6 +97,17 @@ class ExpenseService:
         Supports equal division or individually specified amounts.
         """
 
+        await EventService.get_as_dependency().require_active(expense_request.event_id)
+        members = await EventService.get_as_dependency().get_participants(
+            expense_request.event_id
+        )
+        active_ids = {
+            str(member.tg_id) for member in members if member.status == "PARTICIPATING"
+        }
+        if str(paid_by.tg_id) not in active_ids or any(
+            str(p.tg_id) not in active_ids for p in expense_request.participants
+        ):
+            raise ValueError("Расход доступен только действующим участникам события")
         paid_by_user_orm = await self._user_db.get(User(tg_id=paid_by.tg_id))
         if not paid_by_user_orm:
             raise ValueError(f"User with tg_id {paid_by.tg_id} not found")
@@ -346,6 +358,8 @@ class ExpenseService:
 
         if paid_by.id != expense.paid_by_id:
             raise ValueError("Only the expense creator can delete it")
+
+        await EventService.get_as_dependency().require_active(expense.event_id)
 
         await self._expense_db.update_expense_status(expense_id, "DELETED")
 

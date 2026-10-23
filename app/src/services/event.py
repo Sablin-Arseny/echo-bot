@@ -1,4 +1,6 @@
+from datetime import datetime
 from functools import cache
+from zoneinfo import ZoneInfo
 
 from app.src.db.event import EventDB
 from app.src.db.user import UserDB
@@ -66,16 +68,10 @@ class EventService:
         Passes populated fields to EventDB.
         """
 
-        participants = await self.get_participants(event.id)
-        users = [
-            participant for participant in participants if participant.id == user.id
-        ]
-        if not users:
-            raise LookupError(f"User is not found for event {event.id}")
-        if users[0].role not in {"ADMIN", "OWNER"}:
-            raise ValueError("User role must be ADMIN or OWNER")
+        await self.require_owner(event.id, user)
+        await self.require_active(event.id)
 
-        update_event = event.model_dump(exclude_none=True, exclude={"id"})
+        update_event = event.model_dump(exclude={"id"})
         event = await self._event_db.update_event(event.id, update_event)
         return EventResponse.model_validate(event)
 
@@ -90,7 +86,9 @@ class EventService:
             return None
         return EventResponse.model_validate(event)
 
-    async def get_by_user(self, user: User, status: STATUS | None):
+    async def get_by_user(
+        self, user: User, status: STATUS | None, archived: bool | None = None
+    ):
         """Returns events for the specified user.
 
         Optionally filters them by membership status.
@@ -99,7 +97,50 @@ class EventService:
         events = await self._event_db.get_events_by_member(user, status)
         if not events:
             return []
-        return [EventResponse.model_validate(event) for event in events]
+        return [
+            EventResponse.model_validate(event)
+            for event in events
+            if archived is None or bool(event.finished_at) == archived
+        ]
+
+    async def require_active(self, event_id: int):
+        """Requires an active event."""
+        event = await self.get(event_id)
+        if not event:
+            raise ValueError("Событие не найдено")
+        if event.finished_at:
+            raise ValueError("Событие завершено. Доступно только погашение долгов")
+        return event
+
+    async def require_owner(self, event_id: int, user: User):
+        """Requires the active event owner."""
+        participants = await self.get_participants(event_id)
+        if not any(
+            p.id == user.id and p.role == "OWNER" and p.status == "PARTICIPATING"
+            for p in participants
+        ):
+            raise PermissionError("Действие доступно только создателю события")
+
+    async def finish(self, event_id: int, user: User):
+        """Finishes an event permanently."""
+        await self.require_owner(event_id, user)
+        await self.require_active(event_id)
+        await self._event_db.update_event(
+            event_id, {"finished_at": datetime.now(ZoneInfo("UTC"))}
+        )
+        return await self.get(event_id)
+
+    async def remove_member(self, event_id: int, member_id: int, user: User):
+        """Removes membership while preserving financial history."""
+        await self.require_owner(event_id, user)
+        await self.require_active(event_id)
+        participants = await self.get_participants(event_id)
+        member = next((p for p in participants if p.id == member_id), None)
+        if not member or member.status == "DELETED":
+            raise ValueError("Участник не найден")
+        if member.role == "OWNER":
+            raise ValueError("Создателя события удалить нельзя")
+        await self._event_db.update_status_of_member(event_id, member_id, "DELETED")
 
     async def get_participants(self, event_id: int) -> list[Participant]:
         """Returns participants for the specified event.
@@ -124,17 +165,14 @@ class EventService:
     async def add_user_to_event(self, event_id: int, user_to_add: User, user: User):
         """Adds a user to an event.
 
-        Allows the operation for owners or administrators.
+        Allows the operation for the event owner.
         """
 
-        participants = await self.get_participants(event_id)
-        users = [p for p in participants if p.id == user.id]
-        if not users:
-            raise LookupError(f"User is not found for event {event_id}")
-        user_role = users[0].role
-        if user_role != "ADMIN" and user_role != "OWNER":
-            raise ValueError("User role must be ADMIN or OWNER")
+        await self.require_active(event_id)
+        await self.require_owner(event_id, user)
         user_to_add = await self._user_db.get(user_to_add)
+        if not user_to_add:
+            raise ValueError("Пользователь не найден")
         return await self._event_db.add_relation_event_member(
             event_id, user_to_add, "PARTICIPANT"
         )
@@ -145,6 +183,7 @@ class EventService:
         Creates membership with the PARTICIPANT role.
         """
 
+        await self.require_active(event_id)
         user_to_add = await self._user_db.get(user_to_add)
         return await self._event_db.add_relation_event_member(
             event_id, user_to_add, "PARTICIPANT"
@@ -177,5 +216,10 @@ class EventService:
         Finds the user and updates the related membership.
         """
 
+        await self.require_active(event_id)
         user = await self._user_db.get(user)
+        members = await self.get_participants(event_id)
+        current = next((p for p in members if p.id == user.id), None)
+        if current and current.status == "DELETED":
+            raise PermissionError("Вы удалены из события. Повторный вход недоступен")
         return await self._event_db.update_status_of_member(event_id, user.id, status)

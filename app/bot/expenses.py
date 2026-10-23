@@ -57,7 +57,7 @@ async def collect_pending_confirmations(
 ) -> list[tuple[ExpenseResponse, ParticipantResponse]]:
     event_service = EventService.get_as_dependency()
     expense_service = ExpenseService.get_as_dependency()
-    events = await event_service.get_by_user(user, "PARTICIPATING")
+    events = await event_service.get_by_user(user, None)
     pending = []
     for event in events:
         async for expense in expense_service.get(event.id):

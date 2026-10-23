@@ -12,8 +12,8 @@ from app.bot.calendar import date_input_menu, hour_menu, minute_menu, month_menu
 from app.bot.invites import invite_payload, invited_event_id
 from app.bot.keyboards import cancel_menu, confirmation_menu, event_menu, skip_menu
 from app.bot.labels import EVENT_STATUS
-from app.bot.states import EventForm
-from app.src.schemas import CreateEventRequest
+from app.bot.states import EventEditForm, EventForm
+from app.src.schemas import CreateEventRequest, UpdateEvent
 from app.src.services.event import EventService
 
 from .common import ensure_user, require_event_member
@@ -36,6 +36,8 @@ def event_text(event) -> str:
         lines.append(escape(event.event_place))
     if event.description:
         lines.extend(["", escape(event.description)])
+    if getattr(event, "finished_at", None):
+        lines.extend(["", "🗂 Событие завершено. Можно погашать существующие долги."])
     return "\n".join(lines)
 
 
@@ -48,15 +50,23 @@ def format_event_date(value: datetime) -> str:
 async def view_event(callback: CallbackQuery) -> None:
     event_id = int(callback.data.rsplit(":", 1)[1])
     user = await ensure_user(callback)
-    await require_event_member(event_id, user)
+    await require_event_member(event_id, user, allow_removed=True)
     event = await EventService.get_as_dependency().get(event_id)
     if not event:
         await callback.answer("Событие не найдено", show_alert=True)
         return
     participants = await EventService.get_as_dependency().get_participants(event_id)
+    participants = [p for p in participants if p.status != "DELETED"]
     await callback.message.edit_text(
         f"{event_text(event)}\n\nУчастников: {len(participants)}",
-        reply_markup=event_menu(event_id),
+        reply_markup=event_menu(
+            event_id,
+            finished=bool(event.finished_at),
+            owner=any(p.id == user.id and p.role == "OWNER" for p in participants),
+            member=any(
+                p.id == user.id and p.status == "PARTICIPATING" for p in participants
+            ),
+        ),
     )
     await callback.answer()
 
@@ -277,7 +287,7 @@ async def save_event(callback: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
     await callback.message.edit_text(
         f"Событие создано.\n\n{event_text(event)}",
-        reply_markup=event_menu(event.id),
+        reply_markup=event_menu(event.id, owner=True),
     )
     await callback.answer()
 
@@ -295,6 +305,7 @@ async def join_event(callback: CallbackQuery) -> None:
         return
     user = await ensure_user(callback)
     service = EventService.get_as_dependency()
+    await service.require_active(event_id)
     participants = await service.get_participants(event_id)
     current = next(
         (participant for participant in participants if participant.id == user.id), None
@@ -314,6 +325,7 @@ async def invite_to_event(callback: CallbackQuery) -> None:
     event_id = int(callback.data.rsplit(":", 1)[1])
     user = await ensure_user(callback)
     await require_event_member(event_id, user)
+    await EventService.get_as_dependency().require_active(event_id)
     link = await create_start_link(callback.bot, invite_payload(event_id), encode=False)
     await callback.message.answer(f"Ссылка для приглашения:\n{link}")
     await callback.answer()
@@ -323,15 +335,203 @@ async def invite_to_event(callback: CallbackQuery) -> None:
 async def event_members(callback: CallbackQuery) -> None:
     event_id = int(callback.data.rsplit(":", 1)[1])
     user = await ensure_user(callback)
-    await require_event_member(event_id, user)
+    await require_event_member(event_id, user, allow_removed=True)
     participants = await EventService.get_as_dependency().get_participants(event_id)
+    participants = [p for p in participants if p.status != "DELETED"]
     lines = ["<b>👥 Участники</b>", ""]
     for participant in participants:
         name = participant.full_name or participant.username or participant.tg_id
         lines.append(f"{escape(name)} — {EVENT_STATUS[participant.status]}")
     builder = InlineKeyboardBuilder()
-    builder.button(text="🔗 Пригласить", callback_data=f"event:invite:{event_id}")
+    event = await EventService.get_as_dependency().get(event_id)
+    if not event.finished_at and any(
+        p.id == user.id and p.status == "PARTICIPATING" for p in participants
+    ):
+        if any(p.id == user.id and p.role == "OWNER" for p in participants):
+            for participant in participants:
+                if participant.role != "OWNER":
+                    name = (
+                        participant.full_name
+                        or participant.username
+                        or participant.tg_id
+                    )
+                    builder.button(
+                        text=f"Удалить — {name}",
+                        callback_data=f"event:remove:{event_id}:{participant.id}",
+                    )
+        builder.button(text="🔗 Пригласить", callback_data=f"event:invite:{event_id}")
     builder.button(text="Назад", callback_data=f"event:view:{event_id}")
     builder.adjust(1)
     await callback.message.edit_text("\n".join(lines), reply_markup=builder.as_markup())
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("event:remove:"))
+async def preview_remove_member(callback: CallbackQuery) -> None:
+    _, _, event_id, member_id = callback.data.split(":")
+    service = EventService.get_as_dependency()
+    await service.require_owner(int(event_id), await ensure_user(callback))
+    await service.require_active(int(event_id))
+    member = next(
+        (
+            p
+            for p in await service.get_participants(int(event_id))
+            if p.id == int(member_id)
+        ),
+        None,
+    )
+    if not member or member.status == "DELETED" or member.role == "OWNER":
+        await callback.answer("Участника нельзя удалить", show_alert=True)
+        return
+    name = member.full_name or member.username or member.tg_id
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text="Удалить участника",
+        callback_data=f"event:remove_confirm:{event_id}:{member_id}",
+    )
+    builder.button(text="Назад", callback_data=f"event:members:{event_id}")
+    builder.adjust(1)
+    await callback.message.edit_text(
+        f"Удалить участника {escape(name)}?\n\nЕго старые расходы и долги сохранятся. "
+        "Вернуться по приглашению он не сможет.",
+        reply_markup=builder.as_markup(),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("event:remove_confirm:"))
+async def remove_member(callback: CallbackQuery) -> None:
+    _, _, event_id, member_id = callback.data.split(":")
+    await EventService.get_as_dependency().remove_member(
+        int(event_id), int(member_id), await ensure_user(callback)
+    )
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Участники", callback_data=f"event:members:{event_id}")
+    await callback.message.edit_text(
+        "Участник удалён. Его долги и история сохранены.",
+        reply_markup=builder.as_markup(),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("event:finish:"))
+async def preview_finish_event(callback: CallbackQuery) -> None:
+    event_id = int(callback.data.rsplit(":", 1)[1])
+    user = await ensure_user(callback)
+    service = EventService.get_as_dependency()
+    await service.require_owner(event_id, user)
+    event = await service.require_active(event_id)
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Завершить", callback_data=f"event:finish_confirm:{event_id}")
+    builder.button(text="Назад", callback_data=f"event:view:{event_id}")
+    builder.adjust(1)
+    await callback.message.edit_text(
+        f"Завершить событие «{escape(event.name)}»?\n\n"
+        "Оно попадёт в архив. Изменять событие, участников и расходы больше нельзя. "
+        "Старые долги можно погашать. Повторное открытие недоступно.",
+        reply_markup=builder.as_markup(),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("event:finish_confirm:"))
+async def finish_event(callback: CallbackQuery) -> None:
+    event_id = int(callback.data.rsplit(":", 1)[1])
+    event = await EventService.get_as_dependency().finish(
+        event_id, await ensure_user(callback)
+    )
+    await callback.message.edit_text(
+        event_text(event), reply_markup=event_menu(event_id, finished=True)
+    )
+    await callback.answer("Событие отправлено в архив")
+
+
+EDIT_FIELDS = {
+    "name": "название",
+    "description": "описание",
+    "start_date": "дату",
+    "event_place": "место",
+}
+
+
+@router.callback_query(F.data.startswith("event:edit:"))
+async def edit_event(callback: CallbackQuery, state: FSMContext) -> None:
+    event_id = int(callback.data.rsplit(":", 1)[1])
+    service = EventService.get_as_dependency()
+    await service.require_owner(event_id, await ensure_user(callback))
+    await service.require_active(event_id)
+    await state.clear()
+    builder = InlineKeyboardBuilder()
+    for field, label in EDIT_FIELDS.items():
+        builder.button(
+            text="Дата" if field == "start_date" else label.capitalize(),
+            callback_data=f"event:field:{event_id}:{field}",
+        )
+    builder.button(text="Назад", callback_data=f"event:view:{event_id}")
+    builder.adjust(1)
+    await callback.message.edit_text(
+        "Что изменить в событии?", reply_markup=builder.as_markup()
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("event:field:"))
+async def edit_event_field(callback: CallbackQuery, state: FSMContext) -> None:
+    _, _, event_id, field = callback.data.split(":")
+    if field not in EDIT_FIELDS:
+        return
+    service = EventService.get_as_dependency()
+    await service.require_owner(int(event_id), await ensure_user(callback))
+    event = await service.require_active(int(event_id))
+    await state.clear()
+    await state.update_data(event=event.model_dump(mode="json"), field=field)
+    await state.set_state(EventEditForm.value)
+    hint = " ДД.ММ.ГГГГ или ДД.ММ.ГГГГ ЧЧ:ММ (МСК)" if field == "start_date" else ""
+    if field in {"description", "event_place"}:
+        hint = ". Отправьте «-», чтобы очистить"
+    await callback.message.edit_text(
+        f"Введите {'новую' if field == 'start_date' else 'новое'} {EDIT_FIELDS[field]}{hint}",
+        reply_markup=cancel_menu(),
+    )
+    await callback.answer()
+
+
+@router.message(EventEditForm.value)
+async def event_edit_value(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    field = data["field"]
+    value = (message.text or "").strip()
+    if not value:
+        await message.answer("Введите значение текстом")
+        return
+    if field == "start_date":
+        try:
+            value = parse_event_date(value).isoformat()
+        except ValueError as error:
+            await message.answer(str(error))
+            return
+    elif field in {"description", "event_place"} and value == "-":
+        value = None
+    draft = data["event"]
+    draft[field] = value
+    await state.update_data(event=draft)
+    await state.set_state(EventEditForm.confirmation)
+    event = UpdateEvent.model_validate(draft)
+    await message.answer(
+        f"Проверьте изменения\n\n{event_text(event)}",
+        reply_markup=confirmation_menu("event_edit"),
+    )
+
+
+@router.callback_query(EventEditForm.confirmation, F.data == "save:event_edit")
+async def save_event_edit(callback: CallbackQuery, state: FSMContext) -> None:
+    data = await state.get_data()
+    event = await EventService.get_as_dependency().update(
+        UpdateEvent.model_validate(data["event"]), await ensure_user(callback)
+    )
+    await state.clear()
+    await callback.message.edit_text(
+        f"✅ Событие обновлено\n\n{event_text(event)}",
+        reply_markup=event_menu(event.id, owner=True),
+    )
     await callback.answer()

@@ -45,6 +45,19 @@ async def start(message: Message, command: CommandObject) -> None:
                 f"{greeting}\n\nСобытие не найдено.", reply_markup=main_menu()
             )
             return
+        if event.finished_at:
+            await message.answer(
+                "Событие завершено. Присоединиться к нему нельзя.",
+                reply_markup=main_menu(),
+            )
+            return
+        members = await EventService.get_as_dependency().get_participants(event_id)
+        if any(p.id == user.id and p.status == "DELETED" for p in members):
+            await message.answer(
+                "Вы удалены из события. Повторный вход недоступен.",
+                reply_markup=main_menu(),
+            )
+            return
         await message.answer(
             f"{greeting}\n\nВас пригласили в событие:\n\n{event_text(event)}",
             reply_markup=join_menu(command.args),
@@ -83,9 +96,13 @@ async def cancel_callback(callback: CallbackQuery, state: FSMContext) -> None:
 
 
 @router.callback_query(F.data == "menu:events")
+@router.callback_query(F.data == "menu:archive")
 async def list_events(callback: CallbackQuery) -> None:
     user = await ensure_user(callback)
-    events = await EventService.get_as_dependency().get_by_user(user, "PARTICIPATING")
+    archived = callback.data == "menu:archive"
+    events = await EventService.get_as_dependency().get_by_user(
+        user, "PARTICIPATING", archived=archived
+    )
     builder = InlineKeyboardBuilder()
     for event in events:
         builder.button(text=event.name, callback_data=f"event:view:{event.id}")
@@ -94,6 +111,10 @@ async def list_events(callback: CallbackQuery) -> None:
         InlineKeyboardButton(text="Создать событие", callback_data="event:create")
     )
     builder.row(InlineKeyboardButton(text="Главное меню", callback_data="menu:main"))
-    text = "Ваши события:" if events else "У вас пока нет событий."
+    text = (
+        ("🗂 Архив событий" if archived else "Ваши события")
+        if events
+        else ("В архиве пока нет событий." if archived else "У вас пока нет событий.")
+    )
     await callback.message.edit_text(text, reply_markup=builder.as_markup())
     await callback.answer()

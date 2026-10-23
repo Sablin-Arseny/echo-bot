@@ -40,7 +40,17 @@ class EventDB(BaseDB):
         """
 
         async with self.create_session() as session:
-            event_orm = await session.get(Event, event_id)
+            event_orm = await session.scalar(
+                select(Event).where(Event.id == event_id).with_for_update()
+            )
+            if not event_orm:
+                raise ValueError("Событие не найдено")
+            if event_orm.finished_at:
+                raise ValueError(
+                    "Завершённое событие изменять или открывать повторно нельзя"
+                )
+            if "finished_at" in event and event["finished_at"] is None:
+                raise ValueError("Повторное открытие события запрещено")
 
             for key, value in event.items():
                 if hasattr(event_orm, key):
@@ -67,6 +77,18 @@ class EventDB(BaseDB):
         """
 
         async with self.create_session() as session:
+            event = await session.scalar(
+                select(Event).where(Event.id == event_id).with_for_update()
+            )
+            if not event or event.finished_at:
+                raise ValueError("Присоединиться можно только к активному событию")
+            current = await session.get(EventMember, (event_id, user.id))
+            if current:
+                if current.status == "DELETED":
+                    raise PermissionError(
+                        "Повторный вход удалённого участника запрещён"
+                    )
+                return event
             event_member = EventMember(
                 event_id=event_id, user_id=user.id, status="DRAFT", role=role
             )
@@ -85,9 +107,19 @@ class EventDB(BaseDB):
             EventMember.event_id == event_id, EventMember.user_id == user_id
         )
         async with self.create_session() as session:
+            event = await session.scalar(
+                select(Event).where(Event.id == event_id).with_for_update()
+            )
+            if not event or event.finished_at:
+                raise ValueError("Участников завершённого события изменять нельзя")
             event_member = await session.execute(stmt)
             event_member = event_member.scalar()
-
+            if not event_member:
+                raise ValueError("Участник не найден")
+            if event_member.status == "DELETED" and status != "DELETED":
+                raise PermissionError("Повторный вход удалённого участника запрещён")
+            if status == "DELETED" and event_member.role == "OWNER":
+                raise ValueError("Создателя события удалить нельзя")
             event_member.status = status
             await session.commit()
         return await self.get_event_by_id(event_id)
@@ -102,9 +134,15 @@ class EventDB(BaseDB):
             EventMember.event_id == event_id, EventMember.user_id == user_id
         )
         async with self.create_session() as session:
+            event = await session.scalar(
+                select(Event).where(Event.id == event_id).with_for_update()
+            )
+            if not event or event.finished_at:
+                raise ValueError("Участников завершённого события изменять нельзя")
             event_member = await session.execute(stmt)
             event_member = event_member.scalar()
-
+            if not event_member or event_member.status == "DELETED":
+                raise ValueError("Участник не найден")
             event_member.role = role
             await session.commit()
         return await self.get_event_by_id(event_id)

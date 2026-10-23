@@ -14,6 +14,7 @@ class Event(Base):
     description = Column(String)
     start_date = Column(TIMESTAMP(timezone=True), nullable=False)
     cancel_of_event_date = Column(TIMESTAMP(timezone=True))
+    finished_at = Column(TIMESTAMP(timezone=True))
     created_at = Column(
         TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
     )
