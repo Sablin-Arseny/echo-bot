@@ -70,7 +70,7 @@ async def collect_pending_confirmations(
 
 
 async def notify_new_expense(
-    bot: Bot, event_name: str, expense: ExpenseResponse
+    bot: Bot, event_name: str, expense: ExpenseResponse, edited: bool = False
 ) -> None:
     for participant in expense.participants:
         if participant.user.tg_id == expense.paid_by.tg_id:
@@ -79,7 +79,7 @@ async def notify_new_expense(
             await bot.send_message(
                 chat_id=participant.user.tg_id,
                 text=(
-                    f"🔔 Новый расход в событии «{escape(event_name)}»: "
+                    f"🔔 {'Обновлённый' if edited else 'Новый'} расход в событии «{escape(event_name)}»: "
                     f"{escape(expense.description or 'Расход')} — {expense.amount:.2f}.\n"
                     f"Ваша доля: {participant.share_amount:.2f}. "
                     f"Оплатил: {escape(display_name(expense.paid_by))}."

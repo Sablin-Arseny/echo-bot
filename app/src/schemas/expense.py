@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -23,10 +24,10 @@ class ParticipantResponse(BaseModel):
 
     id: int
     user: User
-    share_amount: float
-    paid_amount: float = 0.0
+    share_amount: Decimal
+    paid_amount: Decimal = Decimal("0.00")
     status: PARTICIPANT_STATUS = "PENDING"
-    remaining_amount: float
+    remaining_amount: Decimal
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -37,7 +38,7 @@ class ExpenseResponse(BaseModel):
     id: int
     event_id: int
     paid_by: User
-    amount: float
+    amount: Decimal
     description: str = ""
     status: EXPENSE_STATUS = "ACTIVE"
     participants: list[ParticipantResponse] = Field(default_factory=list)
@@ -49,14 +50,16 @@ class ExpenseParticipantRequest(BaseModel):
     """Participant share for expense creation."""
 
     tg_id: str
-    share_amount: float | None = None
+    share_amount: Decimal | None = Field(
+        default=None, gt=0, max_digits=18, decimal_places=2
+    )
 
 
 class CreateExpenseRequest(BaseModel):
     """Data for creating a shared expense."""
 
     event_id: int
-    amount: float | None = None
+    amount: Decimal | None = Field(default=None, gt=0, max_digits=18, decimal_places=2)
     is_equally: bool
     description: str = ""
     participants: list[ExpenseParticipantRequest]
@@ -65,6 +68,8 @@ class CreateExpenseRequest(BaseModel):
     def validate_amount_requirement(self):
         if not self.participants:
             raise ValueError("participants must not be empty")
+        if len({p.tg_id for p in self.participants}) != len(self.participants):
+            raise ValueError("Участники расхода не должны повторяться")
         if self.is_equally and self.amount is None:
             raise ValueError("amount is required when is_equally is True")
         if self.is_equally and self.amount <= 0:
@@ -74,6 +79,10 @@ class CreateExpenseRequest(BaseModel):
             for participant in self.participants
         ):
             raise ValueError("participant shares must be positive")
+        if not self.is_equally and sum(
+            p.share_amount for p in self.participants
+        ) >= Decimal(10000000000000000):
+            raise ValueError("Общая сумма расхода слишком велика")
         return self
 
 
@@ -83,7 +92,7 @@ class UserExpenseResponse(BaseModel):
     id: int
     expense_id: int
     participant_id: int
-    share_amount: float
+    share_amount: Decimal
     status: PARTICIPANT_STATUS
 
 
@@ -91,7 +100,7 @@ class UserTotalExpenseResponse(BaseModel):
     """Total user debt across expenses."""
 
     tg_id: str
-    total_amount: float
+    total_amount: Decimal
     expenses: list[UserExpenseResponse]
 
 
@@ -99,7 +108,7 @@ class MarkParticipantPaidRequest(BaseModel):
     """Data for recording a debt payment."""
 
     expense_id: int
-    amount: float | None = None
+    amount: Decimal | None = Field(default=None, gt=0, max_digits=18, decimal_places=2)
 
 
 class ConfirmPaymentRequest(BaseModel):

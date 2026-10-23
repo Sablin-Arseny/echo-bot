@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Float, ForeignKey, Integer, String, text
+from sqlalchemy import Column, ForeignKey, Integer, Numeric, String, text
 from sqlalchemy.orm import relationship
 
 from app.src.models.base import Base
@@ -12,8 +12,8 @@ class ExpenseParticipant(Base):
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     expense_id = Column(ForeignKey("expense.id"), nullable=False, index=True)
     participant_id = Column(ForeignKey("users.id"), nullable=False, index=True)
-    share_amount = Column(Float, nullable=False, server_default=text("0.0"))
-    paid_amount = Column(Float, nullable=False, server_default=text("0.0"))
+    share_amount = Column(Numeric(18, 2), nullable=False, server_default=text("0.0"))
+    paid_amount = Column(Numeric(18, 2), nullable=False, server_default=text("0.0"))
     status = Column(String, nullable=False, server_default=text("'PENDING'"))
 
     expense = relationship("Expense", back_populates="expense_participants")

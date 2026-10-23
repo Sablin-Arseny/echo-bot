@@ -122,7 +122,15 @@ echo-bot/
 события. Для новой базы таблицы создаются при запуске приложения.
 
 ```sql
+BEGIN;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS finished_at TIMESTAMPTZ;
+ALTER TABLE expense ALTER COLUMN amount TYPE NUMERIC(18, 2)
+    USING round(amount::numeric, 2);
+ALTER TABLE expense_participants ALTER COLUMN share_amount TYPE NUMERIC(18, 2)
+    USING round(share_amount::numeric, 2);
+ALTER TABLE expense_participants ALTER COLUMN paid_amount TYPE NUMERIC(18, 2)
+    USING round(paid_amount::numeric, 2);
+COMMIT;
 ```
 
 Завершение события выполняется вручную и необратимо. Завершённые события

@@ -1,9 +1,10 @@
+from decimal import Decimal
 from functools import cache
 
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 
 from app.src.db.core import BaseDB
-from app.src.models import Expense, ExpenseParticipant, User
+from app.src.models import Event, EventMember, Expense, ExpenseParticipant, User
 
 
 class ExpenseDB(BaseDB):
@@ -28,6 +29,107 @@ class ExpenseDB(BaseDB):
             result = await session.execute(stmt)
             result = result.scalars()
             return list(result)
+
+    async def save_expense(
+        self, data: dict, shares: list[dict], expense_id: int | None = None
+    ):
+        """Saves expense data and shares atomically."""
+        async with self.create_session() as session:
+            event = await session.scalar(
+                select(Event).where(Event.id == data["event_id"]).with_for_update()
+            )
+            if not event or event.finished_at:
+                raise ValueError(
+                    "Создавать и изменять расходы можно только в активном событии"
+                )
+            active_ids = set(
+                (
+                    await session.scalars(
+                        select(EventMember.user_id).where(
+                            EventMember.event_id == event.id,
+                            EventMember.status == "PARTICIPATING",
+                        )
+                    )
+                ).all()
+            )
+            if data["paid_by_id"] not in active_ids or any(
+                p["participant_id"] not in active_ids for p in shares
+            ):
+                raise PermissionError("Расход доступен только действующим участникам")
+            if expense_id is None:
+                expense = Expense(**data, status="ACTIVE")
+                session.add(expense)
+                await session.flush()
+            else:
+                expense = await session.scalar(
+                    select(Expense).where(Expense.id == expense_id).with_for_update()
+                )
+                if (
+                    not expense
+                    or expense.paid_by_id != data["paid_by_id"]
+                    or expense.event_id != event.id
+                ):
+                    raise PermissionError("Изменять расход может только его автор")
+                if expense.status in {"DELETED", "CLOSED"}:
+                    raise ValueError(
+                        "Закрытый или удалённый расход нельзя редактировать"
+                    )
+                existing = (
+                    await session.scalars(
+                        select(ExpenseParticipant)
+                        .where(ExpenseParticipant.expense_id == expense.id)
+                        .with_for_update()
+                    )
+                ).all()
+                if any(
+                    p.participant_id != expense.paid_by_id and p.paid_amount > 0
+                    for p in existing
+                ):
+                    raise ValueError(
+                        "После оплаты расход нельзя редактировать. Доступно удаление"
+                    )
+                for key, value in data.items():
+                    setattr(expense, key, value)
+                await session.execute(
+                    delete(ExpenseParticipant).where(
+                        ExpenseParticipant.expense_id == expense.id
+                    )
+                )
+            for share in shares:
+                share.setdefault("status", "PENDING")
+                if share["share_amount"] == 0:
+                    share["status"] = "CONFIRMED"
+                session.add(ExpenseParticipant(expense_id=expense.id, **share))
+            expense.status = (
+                "CLOSED"
+                if all(p["status"] == "CONFIRMED" for p in shares)
+                else "ACTIVE"
+            )
+            await session.flush()
+            return expense.id
+
+    async def delete_expense(self, expense_id: int, author_id: int):
+        """Deletes an author's active-event expense."""
+        async with self.create_session() as session:
+            expense = await session.get(Expense, expense_id)
+            if not expense:
+                raise ValueError("Расход не найден")
+            event = await session.scalar(
+                select(Event).where(Event.id == expense.event_id).with_for_update()
+            )
+            member = await session.get(EventMember, (expense.event_id, author_id))
+            if (
+                expense.paid_by_id != author_id
+                or not member
+                or member.status != "PARTICIPATING"
+            ):
+                raise PermissionError(
+                    "Удалять расход может только его действующий автор"
+                )
+            if event.finished_at:
+                raise ValueError("Расходы завершённого события изменять нельзя")
+            await session.refresh(expense)
+            expense.status = "DELETED"
 
     async def get_expense_by_id(self, expense_id: int) -> Expense | None:
         """Finds an expense by identifier.
@@ -96,10 +198,10 @@ class ExpenseDB(BaseDB):
         """
 
         participant_data["share_amount"] = round(
-            participant_data.get("share_amount", 0.0), 2
+            participant_data.get("share_amount", 0), 2
         )
         participant_data["paid_amount"] = round(
-            participant_data.get("paid_amount", 0.0), 2
+            participant_data.get("paid_amount", 0), 2
         )
         participant_data["status"] = participant_data.get("status") or "PENDING"
 
@@ -122,48 +224,88 @@ class ExpenseDB(BaseDB):
             await session.commit()
         return await self.get_expense_by_id(expense_id)
 
-    async def mark_participant_paid(self, participant_id: int, paid_amount: float):
+    async def mark_participant_paid(
+        self, participant_id: int, paid_amount, user_id: int
+    ):
         """Records payment for an expense participant.
 
         Adds the amount and caps payment at the participant share.
         """
 
-        participant = await self.get_participant_by_id(participant_id)
-        if not participant:
-            raise ValueError(f"Participant with id {participant_id} not found")
-
-        paid_amount = round(paid_amount + participant.paid_amount, 2)
-
-        share_amount = round(participant.share_amount, 2)
-        if paid_amount >= share_amount:
-            new_status = "PAID"
-            paid_amount = share_amount
-        else:
-            new_status = "PENDING"
-
-        stmt = (
-            update(ExpenseParticipant)
-            .where(ExpenseParticipant.id == participant_id)
-            .values(paid_amount=paid_amount, status=new_status)
-        )
         async with self.create_session() as session:
-            await session.execute(stmt)
-            await session.commit()
+            participant, expense = await self._locked_participant(
+                session, participant_id
+            )
+            if participant.participant_id != user_id:
+                raise PermissionError("Можно отмечать только собственную оплату")
+            if participant.status != "PENDING":
+                raise ValueError("Оплата уже отмечена или подтверждена")
+            participant.paid_amount = min(
+                participant.share_amount, participant.paid_amount + paid_amount
+            )
+            participant.status = (
+                "PAID"
+                if participant.paid_amount >= participant.share_amount
+                else "PENDING"
+            )
+            await self._recalculate(session, expense)
 
-    async def confirm_participant_payment(self, participant_id: int):
+    async def confirm_participant_payment(self, participant_id: int, user_id: int):
         """Confirms an expense participant payment.
 
         Changes the participant status to CONFIRMED.
         """
 
-        stmt = (
-            update(ExpenseParticipant)
-            .where(ExpenseParticipant.id == participant_id)
-            .values(status="CONFIRMED")
-        )
         async with self.create_session() as session:
-            await session.execute(stmt)
-            await session.commit()
+            participant, expense = await self._locked_participant(
+                session, participant_id
+            )
+            if expense.paid_by_id != user_id:
+                raise PermissionError("Подтвердить оплату может только автор расхода")
+            if (
+                participant.status != "PAID"
+                or participant.paid_amount < participant.share_amount
+            ):
+                raise ValueError("Нет полной оплаты для подтверждения")
+            participant.status = "CONFIRMED"
+            await self._recalculate(session, expense)
+
+    async def _locked_participant(self, session, participant_id):
+        participant = await session.get(ExpenseParticipant, participant_id)
+        if not participant:
+            raise ValueError("Доля участника не найдена")
+        expense = await session.get(Expense, participant.expense_id)
+        await session.execute(
+            select(Event).where(Event.id == expense.event_id).with_for_update()
+        )
+        await session.refresh(expense)
+        participant = await session.scalar(
+            select(ExpenseParticipant)
+            .where(ExpenseParticipant.id == participant_id)
+            .execution_options(populate_existing=True)
+        )
+        if not participant or expense.status in {"CLOSED", "DELETED"}:
+            raise ValueError("Расход изменён, закрыт или удалён")
+        return participant, expense
+
+    async def _recalculate(self, session, expense):
+        await session.flush()
+        participants = (
+            await session.scalars(
+                select(ExpenseParticipant).where(
+                    ExpenseParticipant.expense_id == expense.id
+                )
+            )
+        ).all()
+        for participant in participants:
+            if not participant.share_amount:
+                participant.status = "CONFIRMED"
+        if all(p.status == "CONFIRMED" for p in participants):
+            expense.status = "CLOSED"
+        elif any(p.paid_amount > 0 for p in participants):
+            expense.status = "PARTIALLY_PAID"
+        else:
+            expense.status = "ACTIVE"
 
     async def get_participant_by_id(
         self, participant_id: int
@@ -201,7 +343,7 @@ class ExpenseDB(BaseDB):
 
     async def get_user_total_expense_by_tg_id(
         self, tg_id: int, event_id: int | None = None
-    ) -> float:
+    ) -> Decimal:
         """Calculates user expense shares by Telegram ID.
 
         Optionally limits the total to one event.
@@ -220,7 +362,7 @@ class ExpenseDB(BaseDB):
         async with self.create_session() as session:
             result = await session.execute(stmt)
             total = result.scalar()
-            return total or 0.0
+            return total or Decimal(0)
 
     async def get_expense_participants_with_status(
         self, expense_id: int
@@ -243,21 +385,13 @@ class ExpenseDB(BaseDB):
         Derives the expense status from participant statuses.
         """
 
-        participants = await self.get_expense_participants_with_status(expense_id)
-
-        if not participants:
-            return
-
-        all_confirmed = all(p.status == "CONFIRMED" for p in participants)
-        any_paid_or_confirmed = any(
-            p.status in ["PAID", "CONFIRMED"] for p in participants
-        )
-
-        status = "ACTIVE"
-
-        if all_confirmed:
-            status = "CLOSED"
-        elif any_paid_or_confirmed:
-            status = "PARTIALLY_PAID"
-
-        await self.update_expense_status(expense_id, status)
+        async with self.create_session() as session:
+            expense = await session.get(Expense, expense_id)
+            if not expense:
+                raise ValueError("Расход не найден")
+            await session.execute(
+                select(Event).where(Event.id == expense.event_id).with_for_update()
+            )
+            await session.refresh(expense)
+            if expense.status != "DELETED":
+                await self._recalculate(session, expense)
