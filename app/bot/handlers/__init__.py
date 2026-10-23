@@ -3,12 +3,14 @@ import logging
 from aiogram import F, Router
 from aiogram.types import ErrorEvent
 
-from . import events, expenses, menu, payments
+from . import events, expenses, menu, payments, settlements
 
 router = Router()
 router.message.filter(F.chat.type == "private")
 router.callback_query.filter(F.message.chat.type == "private")
-router.include_routers(menu.router, events.router, expenses.router, payments.router)
+router.include_routers(
+    menu.router, events.router, expenses.router, payments.router, settlements.router
+)
 logger = logging.getLogger(__name__)
 
 

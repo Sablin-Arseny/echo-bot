@@ -22,3 +22,9 @@ class ExpenseForm(StatesGroup):
 class EventEditForm(StatesGroup):
     value = State()
     confirmation = State()
+
+
+class SettlementForm(StatesGroup):
+    single = State()
+    batch = State()
+    confirmations = State()

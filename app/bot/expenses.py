@@ -1,5 +1,4 @@
 import logging
-from decimal import Decimal
 from html import escape
 
 from aiogram import Bot
@@ -14,42 +13,6 @@ logger = logging.getLogger(__name__)
 
 def display_name(user: User) -> str:
     return user.full_name or user.username or user.tg_id or "Пользователь"
-
-
-async def collect_debts(
-    user: User, service: ExpenseService | None = None
-) -> list[tuple[ExpenseResponse, ParticipantResponse]]:
-    service = service or ExpenseService.get_as_dependency()
-    summary = await service.get_user_expenses(user)
-    debts = []
-    for item in summary.expenses:
-        if item.status == "CONFIRMED":
-            continue
-        expense = await service.get_expense_detail(item.expense_id)
-        if expense.status == "DELETED":
-            continue
-        participant = next(
-            (value for value in expense.participants if value.user.tg_id == user.tg_id),
-            None,
-        )
-        if participant and participant.remaining_amount > 0:
-            debts.append((expense, participant))
-    return debts
-
-
-def totals_by_creditor(
-    debts: list[tuple[ExpenseResponse, ParticipantResponse]],
-) -> list[tuple[User, Decimal]]:
-    creditors: dict[str, tuple[User, Decimal]] = {}
-    for expense, participant in debts:
-        creditor = expense.paid_by
-        key = creditor.tg_id or str(creditor.id)
-        previous = creditors.get(key, (creditor, Decimal(0)))[1]
-        creditors[key] = (
-            creditor,
-            previous + Decimal(str(participant.remaining_amount)),
-        )
-    return list(creditors.values())
 
 
 async def collect_pending_confirmations(
