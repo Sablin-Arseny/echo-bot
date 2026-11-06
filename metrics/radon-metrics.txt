@@ -1,7 +1,7 @@
-Текстовый вывод Radon до рефакторинга
+Текстовый вывод Radon после рефакторинга
 Репозиторий: https://github.com/Sablin-Arseny/echo-bot
 Ветка: main
-Коммит: e1e1c3d77d2907a2a5b20c85f333a55a8b499254
+Коммит: c0dbb2f37d83c01a568a4cdfa578de27d1cf41d7
 Radon: 6.0.1
 Python: 3.10.10
 Область анализа: app
@@ -61,22 +61,25 @@ app/bot/handlers/settlements.py
     F 141:0 save_settlement - A (1)
     F 202:0 confirm_settlement - A (1)
 app/bot/handlers/expenses.py
-    F 132:0 view_expense - D (26)
-    F 67:0 event_expenses - D (21)
-    F 30:0 expense_text - C (15)
-    F 340:0 manual_share - B (7)
-    F 381:0 show_expense_confirmation - B (7)
-    F 472:0 delete_expense - B (7)
-    F 270:0 expense_mode - B (6)
-    F 311:0 finish_expense_members - B (6)
-    F 408:0 save_expense - A (5)
-    F 294:0 toggle_expense_member - A (4)
-    F 258:0 expense_amount - A (3)
-    F 373:0 equal_shares - A (3)
-    F 448:0 preview_delete_expense - A (3)
-    F 251:0 expense_description - A (2)
-    F 218:0 edit_expense - A (1)
-    F 236:0 create_expense - A (1)
+    F 84:0 event_expenses - C (16)
+    F 174:0 view_expense - C (13)
+    F 30:0 expense_text - C (12)
+    F 155:0 _add_owner_actions - B (8)
+    F 357:0 manual_share - B (7)
+    F 398:0 show_expense_confirmation - B (7)
+    F 489:0 delete_expense - B (7)
+    F 287:0 expense_mode - B (6)
+    F 328:0 finish_expense_members - B (6)
+    F 141:0 _add_payment_confirmations - A (5)
+    F 425:0 save_expense - A (5)
+    F 311:0 toggle_expense_member - A (4)
+    F 64:0 _expense_list_text - A (3)
+    F 275:0 expense_amount - A (3)
+    F 390:0 equal_shares - A (3)
+    F 465:0 preview_delete_expense - A (3)
+    F 268:0 expense_description - A (2)
+    F 235:0 edit_expense - A (1)
+    F 253:0 create_expense - A (1)
 app/bot/handlers/payments.py
     F 104:0 user_confirmations - C (15)
     F 28:0 user_debts - C (14)
@@ -272,8 +275,8 @@ app/src/services/settlement.py
     M 39:4 SettlementService.confirm - A (1)
     M 43:4 SettlementService.cancel - A (1)
 
-228 blocks (classes, functions, methods) analyzed.
-Average complexity: A (3.75)
+231 blocks (classes, functions, methods) analyzed.
+Average complexity: A (3.6796536796536796)
 
 Команда: radon mi app -s
 
@@ -288,7 +291,7 @@ app/bot/calendar.py - A (49.74)
 app/bot/screens.py - A (36.63)
 app/bot/states.py - A (100.00)
 app/bot/handlers/settlements.py - A (32.18)
-app/bot/handlers/expenses.py - B (10.57)
+app/bot/handlers/expenses.py - B (11.33)
 app/bot/handlers/payments.py - A (22.40)
 app/bot/handlers/events.py - B (14.67)
 app/bot/handlers/__init__.py - A (65.36)
@@ -451,13 +454,13 @@ app/bot/handlers/settlements.py
         (C % S): 0%
         (C + M % L): 0%
 app/bot/handlers/expenses.py
-    LOC: 494
-    LLOC: 265
-    SLOC: 458
+    LOC: 511
+    LLOC: 282
+    SLOC: 469
     Comments: 0
     Single comments: 0
     Multi: 0
-    Blank: 36
+    Blank: 42
     - Comment Stats
         (C % L): 0%
         (C % S): 0%
@@ -775,13 +778,13 @@ app/src/services/settlement.py
         (C % S): 0%
         (C + M % L): 0%
 ** Total **
-    LOC: 4552
-    LLOC: 2537
-    SLOC: 3705
+    LOC: 4569
+    LLOC: 2554
+    SLOC: 3716
     Comments: 10
     Single comments: 49
     Multi: 150
-    Blank: 648
+    Blank: 654
     - Comment Stats
         (C % L): 0%
         (C % S): 0%
@@ -934,17 +937,17 @@ app/bot/handlers/settlements.py:
     bugs: 0.10592555176778864
 app/bot/handlers/expenses.py:
     h1: 13
-    h2: 128
-    N1: 85
-    N2: 172
-    vocabulary: 141
-    length: 257
-    calculated_length: 944.1057163358342
-    volume: 1834.86469756649
-    difficulty: 8.734375
-    effort: 16026.39634280731
-    time: 890.3553523781839
-    bugs: 0.6116215658554967
+    h2: 127
+    N1: 79
+    N2: 156
+    vocabulary: 140
+    length: 235
+    calculated_length: 935.6686715558993
+    volume: 1675.381508982067
+    difficulty: 7.984251968503937
+    effort: 13376.668111085166
+    time: 743.1482283936203
+    bugs: 0.5584605029940224
 app/bot/handlers/payments.py:
     h1: 10
     h2: 57
