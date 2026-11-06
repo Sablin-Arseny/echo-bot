@@ -29,11 +29,10 @@ router = Router()
 
 def expense_text(expense) -> str:
     status = EXPENSE_STATUS[expense.status]
-    if (
-        expense.status != "DELETED"
-        and expense.participants
-        and all(p.status in {"PAID", "CONFIRMED"} for p in expense.participants)
-        and any(p.status == "PAID" for p in expense.participants)
+    participant_statuses = {p.status for p in expense.participants}
+    if expense.status != "DELETED" and participant_statuses in (
+        {"PAID"},
+        {"PAID", "CONFIRMED"},
     ):
         status = "Ожидает подтверждения оплат"
     lines = [
@@ -60,6 +59,24 @@ def expense_text(expense) -> str:
             f"({status})"
         )
     return "\n".join(lines)
+
+
+def _expense_list_text(expenses, archived, visible_total, total) -> str:
+    if archived:
+        title = "🗂 Архив расходов"
+        expense_type = "Закрытые"
+        empty_text = "Закрытых расходов пока нет."
+    else:
+        title = "💰 Расходы события"
+        expense_type = "Открытые"
+        empty_text = "Открытых расходов нет."
+    text = (
+        f"{title}\n{expense_type} расходы: {visible_total:.2f}"
+        f"\nВсего по событию: {total:.2f}"
+    )
+    if not expenses:
+        text += f"\n\n{empty_text}"
+    return text
 
 
 @router.callback_query(F.data.startswith("event:expenses:"))
@@ -95,13 +112,13 @@ async def event_expenses(callback: CallbackQuery) -> None:
     active_member = any(
         p.id == user.id and p.status == "PARTICIPATING" for p in members
     )
-    if not event.finished_at and active_member and not archived:
-        builder.row(
-            InlineKeyboardButton(
-                text="Добавить расход", callback_data=f"expense:create:{event_id}"
-            )
-        )
     if not archived:
+        if not event.finished_at and active_member:
+            builder.row(
+                InlineKeyboardButton(
+                    text="Добавить расход", callback_data=f"expense:create:{event_id}"
+                )
+            )
         builder.row(
             InlineKeyboardButton(
                 text="🗂 Архив расходов",
@@ -116,16 +133,41 @@ async def event_expenses(callback: CallbackQuery) -> None:
             ),
         )
     )
-    text = "🗂 Архив расходов" if archived else "💰 Расходы события"
-    text += f"\n{'Закрытые' if archived else 'Открытые'} расходы: {visible_total:.2f}\nВсего по событию: {total:.2f}"
-    if not expenses:
-        text += (
-            "\n\nЗакрытых расходов пока нет."
-            if archived
-            else "\n\nОткрытых расходов нет."
-        )
+    text = _expense_list_text(expenses, archived, visible_total, total)
     await callback.message.edit_text(text, reply_markup=builder.as_markup())
     await callback.answer()
+
+
+def _add_payment_confirmations(builder: InlineKeyboardBuilder, expense) -> None:
+    for participant in expense.participants:
+        if participant.status == "PAID":
+            name = (
+                participant.user.full_name
+                or participant.user.username
+                or participant.user.tg_id
+            )
+            builder.button(
+                text=f"Подтвердить: {name}",
+                callback_data=f"payment:confirm:{expense.id}:{participant.user.tg_id}",
+            )
+
+
+def _add_owner_actions(
+    builder: InlineKeyboardBuilder, expense, user, event, active_member, reserved
+) -> None:
+    if event.finished_at or not active_member:
+        return
+    if (
+        not reserved
+        and expense.status != "CLOSED"
+        and not any(
+            p.user.id != user.id and p.paid_amount > 0 for p in expense.participants
+        )
+    ):
+        builder.button(
+            text="Редактировать расход", callback_data=f"expense:edit:{expense.id}"
+        )
+    builder.button(text="Удалить расход", callback_data=f"expense:delete:{expense.id}")
 
 
 @router.callback_query(F.data.startswith("expense:view:"))
@@ -152,39 +194,14 @@ async def view_expense(callback: CallbackQuery) -> None:
             expense_id, user.id
         )
     )
-    if (
-        participant
-        and participant.remaining_amount > 0
-        and expense.status != "DELETED"
-        and not own_reserved
-    ):
-        builder.button(
-            text="Отметить оплату", callback_data=f"payment:create:{expense_id}"
-        )
-    if expense.paid_by.id == user.id:
-        for item in expense.participants:
-            if item.status == "PAID" and expense.status != "DELETED":
-                name = item.user.full_name or item.user.username or item.user.tg_id
-                builder.button(
-                    text=f"Подтвердить: {name}",
-                    callback_data=f"payment:confirm:{expense_id}:{item.user.tg_id}",
-                )
-        if not event.finished_at and active_member and expense.status != "DELETED":
-            if (
-                not reserved
-                and expense.status != "CLOSED"
-                and not any(
-                    p.user.id != user.id and p.paid_amount > 0
-                    for p in expense.participants
-                )
-            ):
-                builder.button(
-                    text="Редактировать расход",
-                    callback_data=f"expense:edit:{expense_id}",
-                )
+    if expense.status != "DELETED":
+        if participant and participant.remaining_amount > 0 and not own_reserved:
             builder.button(
-                text="Удалить расход", callback_data=f"expense:delete:{expense_id}"
+                text="Отметить оплату", callback_data=f"payment:create:{expense_id}"
             )
+        if expense.paid_by.id == user.id:
+            _add_payment_confirmations(builder, expense)
+            _add_owner_actions(builder, expense, user, event, active_member, reserved)
     builder.adjust(1)
     builder.row(
         InlineKeyboardButton(
