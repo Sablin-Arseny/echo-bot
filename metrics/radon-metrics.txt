@@ -1,0 +1,1286 @@
+Текстовый вывод Radon до рефакторинга
+Репозиторий: https://github.com/Sablin-Arseny/echo-bot
+Ветка: main
+Коммит: e1e1c3d77d2907a2a5b20c85f333a55a8b499254
+Radon: 6.0.1
+Python: 3.10.10
+Область анализа: app
+Вывод команд сохранён без сокращений.
+
+Команда: radon cc app -s -a
+
+app/config.py
+    C 4:0 Settings - A (1)
+app/main.py
+    F 15:0 main - A (2)
+app/bot/expenses.py
+    F 18:0 collect_pending_confirmations - B (7)
+    F 35:0 notify_new_expense - B (6)
+    F 14:0 display_name - A (4)
+    F 60:0 notify_payment - A (3)
+app/bot/invites.py
+    F 16:0 invited_event_id - A (5)
+    F 8:0 invite_payload - A (1)
+app/bot/keyboards.py
+    F 33:0 event_menu - A (5)
+    F 147:0 participants_menu - A (5)
+    F 7:0 main_menu - A (1)
+    F 109:0 cancel_menu - A (1)
+    F 117:0 skip_menu - A (1)
+    F 126:0 confirmation_menu - A (1)
+    F 135:0 split_mode_menu - A (1)
+    F 162:0 join_menu - A (1)
+app/bot/calendar.py
+    F 36:0 month_menu - B (10)
+    F 83:0 hour_menu - A (2)
+    F 94:0 minute_menu - A (2)
+    F 23:0 date_input_menu - A (1)
+app/bot/screens.py
+    M 40:4 ScreenBot.__call__ - C (12)
+    C 119:0 CleanChatMiddleware - C (12)
+    M 120:4 CleanChatMiddleware.__call__ - C (11)
+    C 29:0 ScreenBot - A (5)
+    M 83:4 ScreenBot._move_screen - A (2)
+    M 100:4 ScreenBot._remove_old_screen - A (2)
+    M 108:4 ScreenBot._clear_old_keyboard - A (2)
+    C 23:0 Screen - A (1)
+    M 32:4 ScreenBot.__init__ - A (1)
+app/bot/states.py
+    C 4:0 EventForm - A (1)
+    C 13:0 ExpenseForm - A (1)
+    C 22:0 EventEditForm - A (1)
+    C 27:0 SettlementForm - A (1)
+app/bot/handlers/settlements.py
+    F 58:0 event_settlements - C (13)
+    F 102:0 preview_settlement - B (9)
+    F 174:0 view_settlement - A (4)
+    F 26:0 settlement_text - A (3)
+    F 48:0 notify_settlement - A (2)
+    F 164:0 accessible_settlement - A (2)
+    F 226:0 cancel_settlement - A (2)
+    F 141:0 save_settlement - A (1)
+    F 202:0 confirm_settlement - A (1)
+app/bot/handlers/expenses.py
+    F 132:0 view_expense - D (26)
+    F 67:0 event_expenses - D (21)
+    F 30:0 expense_text - C (15)
+    F 340:0 manual_share - B (7)
+    F 381:0 show_expense_confirmation - B (7)
+    F 472:0 delete_expense - B (7)
+    F 270:0 expense_mode - B (6)
+    F 311:0 finish_expense_members - B (6)
+    F 408:0 save_expense - A (5)
+    F 294:0 toggle_expense_member - A (4)
+    F 258:0 expense_amount - A (3)
+    F 373:0 equal_shares - A (3)
+    F 448:0 preview_delete_expense - A (3)
+    F 251:0 expense_description - A (2)
+    F 218:0 edit_expense - A (1)
+    F 236:0 create_expense - A (1)
+app/bot/handlers/payments.py
+    F 104:0 user_confirmations - C (15)
+    F 28:0 user_debts - C (14)
+    F 158:0 preview_all_confirmations - C (11)
+    F 73:0 preview_all_payments - B (8)
+    F 201:0 confirm_all_payments - B (7)
+    F 240:0 mark_all_paid - A (5)
+    F 272:0 create_payment - A (5)
+    F 298:0 confirm_payment - A (1)
+app/bot/handlers/events.py
+    F 335:0 event_members - C (17)
+    F 50:0 view_event - B (8)
+    F 370:0 preview_remove_member - B (8)
+    F 500:0 event_edit_value - B (7)
+    F 296:0 join_event - B (6)
+    F 25:0 event_text - A (5)
+    F 479:0 edit_event_field - A (5)
+    F 257:0 show_event_confirmation - A (4)
+    F 85:0 event_name - A (3)
+    F 121:0 parse_event_date - A (3)
+    F 139:0 event_start_date - A (3)
+    F 225:0 type_calendar_time - A (3)
+    F 458:0 edit_event - A (3)
+    F 44:0 format_event_date - A (2)
+    F 97:0 event_description - A (2)
+    F 130:0 ask_event_place - A (2)
+    F 159:0 change_calendar_month - A (2)
+    F 171:0 choose_calendar_day - A (2)
+    F 208:0 choose_calendar_time - A (2)
+    F 245:0 event_place - A (2)
+    F 75:0 create_event - A (1)
+    F 103:0 skip_event_description - A (1)
+    F 113:0 ask_event_date - A (1)
+    F 150:0 open_calendar - A (1)
+    F 188:0 choose_calendar_hour - A (1)
+    F 197:0 choose_date_only - A (1)
+    F 240:0 ignore_calendar_button - A (1)
+    F 251:0 skip_event_place - A (1)
+    F 275:0 save_event - A (1)
+    F 324:0 invite_to_event - A (1)
+    F 403:0 remove_member - A (1)
+    F 418:0 preview_finish_event - A (1)
+    F 438:0 finish_event - A (1)
+    F 527:0 save_event_edit - A (1)
+app/bot/handlers/__init__.py
+    F 18:0 handle_error - A (3)
+app/bot/handlers/menu.py
+    F 22:0 start - C (11)
+    F 100:0 list_events - A (5)
+    F 70:0 help_command - A (1)
+    F 79:0 cancel_command - A (1)
+    F 85:0 main_callback - A (1)
+    F 92:0 cancel_callback - A (1)
+app/bot/handlers/common.py
+    F 14:0 ensure_user - A (5)
+    F 31:0 require_event_member - A (5)
+    F 44:0 parse_amount - A (5)
+    F 10:0 telegram_user - A (1)
+app/src/models/expense_participant.py
+    C 7:0 ExpenseParticipant - A (1)
+app/src/models/user.py
+    C 7:0 User - A (1)
+app/src/models/event.py
+    C 7:0 Event - A (1)
+app/src/models/expense.py
+    C 7:0 Expense - A (1)
+app/src/models/settlement.py
+    C 16:0 Settlement - A (1)
+    C 38:0 SettlementAllocation - A (1)
+app/src/models/event_member.py
+    C 7:0 EventMember - A (1)
+app/src/models/base.py
+    F 8:0 init_db - A (1)
+app/src/schemas/user.py
+    C 20:0 User - A (1)
+    C 31:0 Participant - A (1)
+app/src/schemas/event.py
+    C 8:0 CreateEventRequest - A (1)
+    C 19:0 EventResponse - A (1)
+    C 36:0 UpdateEvent - A (1)
+app/src/schemas/expense.py
+    C 58:0 CreateExpenseRequest - C (16)
+    M 68:4 CreateExpenseRequest.validate_amount_requirement - C (15)
+    C 22:0 ParticipantResponse - A (1)
+    C 35:0 ExpenseResponse - A (1)
+    C 49:0 ExpenseParticipantRequest - A (1)
+    C 89:0 UserExpenseResponse - A (1)
+    C 99:0 UserTotalExpenseResponse - A (1)
+    C 107:0 MarkParticipantPaidRequest - A (1)
+    C 114:0 ConfirmPaymentRequest - A (1)
+app/src/schemas/settlement.py
+    C 9:0 SettlementQuote - A (2)
+    M 21:4 SettlementQuote.amount - A (1)
+    C 25:0 SettlementResponse - A (1)
+app/src/db/user.py
+    M 81:4 UserDB.check_user - A (4)
+    C 10:0 UserDB - A (3)
+    M 35:4 UserDB.update - A (3)
+    M 55:4 UserDB.get - A (2)
+    M 18:4 UserDB.get_as_dependency - A (1)
+    M 21:4 UserDB.create - A (1)
+    M 69:4 UserDB.get_all - A (1)
+app/src/db/event.py
+    M 98:4 EventDB.update_status_of_member - B (8)
+    M 36:4 EventDB.update_event - B (7)
+    M 73:4 EventDB.add_relation_event_member - A (5)
+    M 127:4 EventDB.update_role_of_member - A (5)
+    C 11:0 EventDB - A (4)
+    M 166:4 EventDB.get_events_by_member - A (3)
+    M 150:4 EventDB.get_members_by_event_id - A (2)
+    M 19:4 EventDB.get_as_dependency - A (1)
+    M 22:4 EventDB.create_event - A (1)
+    M 63:4 EventDB.get_event_by_id - A (1)
+app/src/db/expense.py
+    M 34:4 ExpenseDB.save_expense - C (20)
+    M 123:4 ExpenseDB.delete_expense - B (7)
+    M 309:4 ExpenseDB._recalculate - B (7)
+    M 287:4 ExpenseDB._locked_participant - A (5)
+    C 11:0 ExpenseDB - A (4)
+    M 241:4 ExpenseDB.mark_participant_paid - A (4)
+    M 267:4 ExpenseDB.confirm_participant_payment - A (4)
+    M 362:4 ExpenseDB.get_user_total_expense_by_tg_id - A (3)
+    M 400:4 ExpenseDB.recalculate_expense_status - A (3)
+    M 190:4 ExpenseDB.create_expense - A (2)
+    M 206:4 ExpenseDB.create_expense_participant - A (2)
+    M 341:4 ExpenseDB.get_user_expense_participants_by_tg_id - A (2)
+    M 19:4 ExpenseDB.get_as_dependency - A (1)
+    M 22:4 ExpenseDB.get - A (1)
+    M 116:4 ExpenseDB.has_pending_settlement - A (1)
+    M 148:4 ExpenseDB.get_expense_by_id - A (1)
+    M 159:4 ExpenseDB.get_expense_participants - A (1)
+    M 174:4 ExpenseDB.get_expense_participant - A (1)
+    M 229:4 ExpenseDB.update_expense_status - A (1)
+    M 328:4 ExpenseDB.get_participant_by_id - A (1)
+    M 385:4 ExpenseDB.get_expense_participants_with_status - A (1)
+app/src/db/settlement.py
+    M 145:4 SettlementDB.create - C (15)
+    M 210:4 SettlementDB.confirm - C (14)
+    M 87:4 SettlementDB.balances - B (9)
+    F 33:0 pair_balance - B (8)
+    C 64:0 SettlementDB - B (6)
+    M 274:4 SettlementDB.get - A (4)
+    M 198:4 SettlementDB._locked - A (3)
+    F 19:0 pending_settlements - A (2)
+    M 266:4 SettlementDB.cancel - A (2)
+    M 69:4 SettlementDB.get_as_dependency - A (1)
+    M 72:4 SettlementDB._rows - A (1)
+    M 131:4 SettlementDB._pending_pair - A (1)
+app/src/db/core.py
+    C 23:0 BaseDB - A (4)
+    M 30:4 BaseDB.create_session - A (3)
+app/src/services/event.py
+    M 133:4 EventService.remove_member - B (6)
+    M 192:4 EventService.update_member_role - B (6)
+    M 89:4 EventService.get_by_user - A (5)
+    M 115:4 EventService.require_owner - A (5)
+    M 213:4 EventService.update_status_of_member - A (5)
+    C 18:0 EventService - A (4)
+    M 39:4 EventService.create - A (4)
+    M 106:4 EventService.require_active - A (3)
+    M 145:4 EventService.get_participants - A (3)
+    M 78:4 EventService.get - A (2)
+    M 165:4 EventService.add_user_to_event - A (2)
+    M 27:4 EventService.__init__ - A (1)
+    M 33:4 EventService.get_as_dependency - A (1)
+    M 65:4 EventService.update - A (1)
+    M 124:4 EventService.finish - A (1)
+    M 180:4 EventService.add_user_by_invite - A (1)
+app/src/services/expense.py
+    M 133:4 ExpenseService._save_expense - C (19)
+    M 224:4 ExpenseService.mark_participant_paid - B (9)
+    M 275:4 ExpenseService.confirm_payment - B (8)
+    M 102:4 ExpenseService.require_editable - B (7)
+    C 19:0 ExpenseService - A (5)
+    M 68:4 ExpenseService._build_expense_response - A (3)
+    M 326:4 ExpenseService.get_user_expenses - A (3)
+    M 376:4 ExpenseService.delete_expense - A (3)
+    M 37:4 ExpenseService.get - A (2)
+    M 47:4 ExpenseService._build_participant_response - A (2)
+    M 364:4 ExpenseService.get_expense_detail - A (2)
+    M 28:4 ExpenseService.__init__ - A (1)
+    M 34:4 ExpenseService.get_as_dependency - A (1)
+    M 92:4 ExpenseService.create_expense_with_participants - A (1)
+    M 120:4 ExpenseService.has_pending_settlement - A (1)
+    M 126:4 ExpenseService.update_expense - A (1)
+app/src/services/settlement.py
+    C 7:0 SettlementService - A (2)
+    M 18:4 SettlementService.balances - A (2)
+    M 32:4 SettlementService.history - A (2)
+    M 10:4 SettlementService.__init__ - A (1)
+    M 15:4 SettlementService.get_as_dependency - A (1)
+    M 25:4 SettlementService.create - A (1)
+    M 39:4 SettlementService.confirm - A (1)
+    M 43:4 SettlementService.cancel - A (1)
+
+228 blocks (classes, functions, methods) analyzed.
+Average complexity: A (3.75)
+
+Команда: radon mi app -s
+
+app/config.py - A (100.00)
+app/main.py - A (62.44)
+app/bot/labels.py - A (100.00)
+app/bot/expenses.py - A (49.46)
+app/bot/invites.py - A (59.88)
+app/bot/keyboards.py - A (53.47)
+app/bot/__init__.py - A (100.00)
+app/bot/calendar.py - A (49.74)
+app/bot/screens.py - A (36.63)
+app/bot/states.py - A (100.00)
+app/bot/handlers/settlements.py - A (32.18)
+app/bot/handlers/expenses.py - B (10.57)
+app/bot/handlers/payments.py - A (22.40)
+app/bot/handlers/events.py - B (14.67)
+app/bot/handlers/__init__.py - A (65.36)
+app/bot/handlers/menu.py - A (43.54)
+app/bot/handlers/common.py - A (49.81)
+app/src/models/expense_participant.py - A (100.00)
+app/src/models/user.py - A (100.00)
+app/src/models/event.py - A (100.00)
+app/src/models/expense.py - A (100.00)
+app/src/models/settlement.py - A (100.00)
+app/src/models/__init__.py - A (100.00)
+app/src/models/event_member.py - A (100.00)
+app/src/models/base.py - A (100.00)
+app/src/schemas/user.py - A (60.23)
+app/src/schemas/event.py - A (49.33)
+app/src/schemas/expense.py - A (37.39)
+app/src/schemas/settlement.py - A (59.81)
+app/src/schemas/__init__.py - A (100.00)
+app/src/db/user.py - A (75.32)
+app/src/db/event.py - A (56.49)
+app/src/db/expense.py - A (38.95)
+app/src/db/settlement.py - A (24.19)
+app/src/db/core.py - A (100.00)
+app/src/services/event.py - A (53.39)
+app/src/services/expense.py - A (37.84)
+app/src/services/settlement.py - A (100.00)
+
+Команда: radon raw app -s
+
+app/config.py
+    LOC: 30
+    LLOC: 23
+    SLOC: 14
+    Comments: 3
+    Single comments: 3
+    Multi: 3
+    Blank: 10
+    - Comment Stats
+        (C % L): 10%
+        (C % S): 21%
+        (C + M % L): 20%
+app/main.py
+    LOC: 33
+    LLOC: 23
+    SLOC: 26
+    Comments: 0
+    Single comments: 0
+    Multi: 0
+    Blank: 7
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/bot/labels.py
+    LOC: 20
+    LLOC: 6
+    SLOC: 18
+    Comments: 0
+    Single comments: 0
+    Multi: 0
+    Blank: 2
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/bot/expenses.py
+    LOC: 81
+    LLOC: 36
+    SLOC: 70
+    Comments: 0
+    Single comments: 0
+    Multi: 0
+    Blank: 11
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/bot/invites.py
+    LOC: 26
+    LLOC: 20
+    SLOC: 21
+    Comments: 0
+    Single comments: 0
+    Multi: 0
+    Blank: 5
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/bot/keyboards.py
+    LOC: 172
+    LLOC: 34
+    SLOC: 155
+    Comments: 0
+    Single comments: 0
+    Multi: 0
+    Blank: 17
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/bot/__init__.py
+    LOC: 1
+    LLOC: 1
+    SLOC: 0
+    Comments: 0
+    Single comments: 1
+    Multi: 0
+    Blank: 0
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/bot/calendar.py
+    LOC: 108
+    LLOC: 34
+    SLOC: 98
+    Comments: 0
+    Single comments: 0
+    Multi: 0
+    Blank: 10
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/bot/screens.py
+    LOC: 152
+    LLOC: 98
+    SLOC: 137
+    Comments: 0
+    Single comments: 1
+    Multi: 0
+    Blank: 14
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/bot/states.py
+    LOC: 30
+    LLOC: 22
+    SLOC: 22
+    Comments: 0
+    Single comments: 0
+    Multi: 0
+    Blank: 8
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/bot/handlers/settlements.py
+    LOC: 246
+    LLOC: 134
+    SLOC: 224
+    Comments: 0
+    Single comments: 0
+    Multi: 0
+    Blank: 22
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/bot/handlers/expenses.py
+    LOC: 494
+    LLOC: 265
+    SLOC: 458
+    Comments: 0
+    Single comments: 0
+    Multi: 0
+    Blank: 36
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/bot/handlers/payments.py
+    LOC: 308
+    LLOC: 193
+    SLOC: 288
+    Comments: 0
+    Single comments: 0
+    Multi: 0
+    Blank: 20
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/bot/handlers/events.py
+    LOC: 537
+    LLOC: 339
+    SLOC: 463
+    Comments: 0
+    Single comments: 0
+    Multi: 0
+    Blank: 74
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/bot/handlers/__init__.py
+    LOC: 25
+    LLOC: 18
+    SLOC: 20
+    Comments: 0
+    Single comments: 0
+    Multi: 0
+    Blank: 5
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/bot/handlers/menu.py
+    LOC: 120
+    LLOC: 71
+    SLOC: 104
+    Comments: 0
+    Single comments: 0
+    Multi: 0
+    Blank: 16
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/bot/handlers/common.py
+    LOC: 53
+    LLOC: 32
+    SLOC: 43
+    Comments: 0
+    Single comments: 0
+    Multi: 0
+    Blank: 10
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/src/models/expense_participant.py
+    LOC: 20
+    LLOC: 14
+    SLOC: 13
+    Comments: 0
+    Single comments: 1
+    Multi: 0
+    Blank: 6
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/src/models/user.py
+    LOC: 19
+    LLOC: 13
+    SLOC: 12
+    Comments: 0
+    Single comments: 1
+    Multi: 0
+    Blank: 6
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/src/models/event.py
+    LOC: 25
+    LLOC: 17
+    SLOC: 18
+    Comments: 0
+    Single comments: 1
+    Multi: 0
+    Blank: 6
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/src/models/expense.py
+    LOC: 21
+    LLOC: 15
+    SLOC: 14
+    Comments: 0
+    Single comments: 1
+    Multi: 0
+    Blank: 6
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/src/models/settlement.py
+    LOC: 52
+    LLOC: 24
+    SLOC: 41
+    Comments: 0
+    Single comments: 2
+    Multi: 0
+    Blank: 9
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/src/models/__init__.py
+    LOC: 6
+    LLOC: 6
+    SLOC: 6
+    Comments: 6
+    Single comments: 0
+    Multi: 0
+    Blank: 0
+    - Comment Stats
+        (C % L): 100%
+        (C % S): 100%
+        (C + M % L): 100%
+app/src/models/event_member.py
+    LOC: 18
+    LLOC: 12
+    SLOC: 11
+    Comments: 0
+    Single comments: 1
+    Multi: 0
+    Blank: 6
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/src/models/base.py
+    LOC: 12
+    LLOC: 7
+    SLOC: 8
+    Comments: 0
+    Single comments: 0
+    Multi: 0
+    Blank: 4
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/src/schemas/user.py
+    LOC: 35
+    LLOC: 21
+    SLOC: 23
+    Comments: 0
+    Single comments: 2
+    Multi: 0
+    Blank: 10
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/src/schemas/event.py
+    LOC: 44
+    LLOC: 54
+    SLOC: 29
+    Comments: 0
+    Single comments: 3
+    Multi: 0
+    Blank: 12
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/src/schemas/expense.py
+    LOC: 118
+    LLOC: 103
+    SLOC: 79
+    Comments: 0
+    Single comments: 8
+    Multi: 0
+    Blank: 31
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/src/schemas/settlement.py
+    LOC: 35
+    LLOC: 41
+    SLOC: 24
+    Comments: 0
+    Single comments: 2
+    Multi: 0
+    Blank: 9
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/src/schemas/__init__.py
+    LOC: 5
+    LLOC: 5
+    SLOC: 5
+    Comments: 1
+    Single comments: 0
+    Multi: 0
+    Blank: 0
+    - Comment Stats
+        (C % L): 20%
+        (C % S): 20%
+        (C + M % L): 20%
+app/src/db/user.py
+    LOC: 93
+    LLOC: 55
+    SLOC: 49
+    Comments: 0
+    Single comments: 0
+    Multi: 18
+    Blank: 26
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 19%
+app/src/db/event.py
+    LOC: 183
+    LLOC: 103
+    SLOC: 122
+    Comments: 0
+    Single comments: 0
+    Multi: 27
+    Blank: 34
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 15%
+app/src/db/expense.py
+    LOC: 415
+    LLOC: 207
+    SLOC: 309
+    Comments: 0
+    Single comments: 3
+    Multi: 45
+    Blank: 58
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 11%
+app/src/db/settlement.py
+    LOC: 314
+    LLOC: 128
+    SLOC: 291
+    Comments: 0
+    Single comments: 6
+    Multi: 0
+    Blank: 17
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+app/src/db/core.py
+    LOC: 38
+    LLOC: 19
+    SLOC: 27
+    Comments: 0
+    Single comments: 0
+    Multi: 3
+    Blank: 8
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 8%
+app/src/services/event.py
+    LOC: 225
+    LLOC: 125
+    SLOC: 144
+    Comments: 0
+    Single comments: 4
+    Multi: 30
+    Blank: 47
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 13%
+app/src/services/expense.py
+    LOC: 393
+    LLOC: 192
+    SLOC: 290
+    Comments: 0
+    Single comments: 3
+    Multi: 24
+    Blank: 76
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 6%
+app/src/services/settlement.py
+    LOC: 45
+    LLOC: 27
+    SLOC: 29
+    Comments: 0
+    Single comments: 6
+    Multi: 0
+    Blank: 10
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 0%
+** Total **
+    LOC: 4552
+    LLOC: 2537
+    SLOC: 3705
+    Comments: 10
+    Single comments: 49
+    Multi: 150
+    Blank: 648
+    - Comment Stats
+        (C % L): 0%
+        (C % S): 0%
+        (C + M % L): 4%
+
+Команда: radon hal app
+
+app/config.py:
+    h1: 0
+    h2: 0
+    N1: 0
+    N2: 0
+    vocabulary: 0
+    length: 0
+    calculated_length: 0
+    volume: 0
+    difficulty: 0
+    effort: 0
+    time: 0.0
+    bugs: 0.0
+app/main.py:
+    h1: 2
+    h2: 3
+    N1: 2
+    N2: 3
+    vocabulary: 5
+    length: 5
+    calculated_length: 6.754887502163469
+    volume: 11.60964047443681
+    difficulty: 1.0
+    effort: 11.60964047443681
+    time: 0.6449800263576005
+    bugs: 0.0038698801581456034
+app/bot/labels.py:
+    h1: 0
+    h2: 0
+    N1: 0
+    N2: 0
+    vocabulary: 0
+    length: 0
+    calculated_length: 0
+    volume: 0
+    difficulty: 0
+    effort: 0
+    time: 0.0
+    bugs: 0.0
+app/bot/expenses.py:
+    h1: 4
+    h2: 15
+    N1: 8
+    N2: 18
+    vocabulary: 19
+    length: 26
+    calculated_length: 66.60335893412778
+    volume: 110.44611534953322
+    difficulty: 2.4
+    effort: 265.0706768388797
+    time: 14.726148713271094
+    bugs: 0.03681537178317774
+app/bot/invites.py:
+    h1: 4
+    h2: 7
+    N1: 4
+    N2: 7
+    vocabulary: 11
+    length: 11
+    calculated_length: 27.651484454403228
+    volume: 38.053747805010275
+    difficulty: 2.0
+    effort: 76.10749561002055
+    time: 4.228194200556697
+    bugs: 0.012684582601670092
+app/bot/keyboards.py:
+    h1: 4
+    h2: 8
+    N1: 5
+    N2: 9
+    vocabulary: 12
+    length: 14
+    calculated_length: 32.0
+    volume: 50.18947501009619
+    difficulty: 2.25
+    effort: 112.92631877271643
+    time: 6.273684376262024
+    bugs: 0.016729825003365395
+app/bot/__init__.py:
+    h1: 0
+    h2: 0
+    N1: 0
+    N2: 0
+    vocabulary: 0
+    length: 0
+    calculated_length: 0
+    volume: 0
+    difficulty: 0
+    effort: 0
+    time: 0.0
+    bugs: 0.0
+app/bot/calendar.py:
+    h1: 7
+    h2: 11
+    N1: 12
+    N2: 24
+    vocabulary: 18
+    length: 36
+    calculated_length: 57.705232259413506
+    volume: 150.11730005192322
+    difficulty: 7.636363636363637
+    effort: 1146.3502913055956
+    time: 63.686127294755316
+    bugs: 0.05003910001730774
+app/bot/screens.py:
+    h1: 6
+    h2: 20
+    N1: 13
+    N2: 25
+    vocabulary: 26
+    length: 38
+    calculated_length: 101.94833690207419
+    volume: 178.61670928936152
+    difficulty: 3.75
+    effort: 669.8126598351057
+    time: 37.21181443528365
+    bugs: 0.05953890309645384
+app/bot/states.py:
+    h1: 0
+    h2: 0
+    N1: 0
+    N2: 0
+    vocabulary: 0
+    length: 0
+    calculated_length: 0
+    volume: 0
+    difficulty: 0
+    effort: 0
+    time: 0.0
+    bugs: 0.0
+app/bot/handlers/settlements.py:
+    h1: 9
+    h2: 28
+    N1: 22
+    N2: 39
+    vocabulary: 37
+    length: 61
+    calculated_length: 163.13526283059372
+    volume: 317.77665530336594
+    difficulty: 6.267857142857143
+    effort: 1991.7786787764544
+    time: 110.65437104313635
+    bugs: 0.10592555176778864
+app/bot/handlers/expenses.py:
+    h1: 13
+    h2: 128
+    N1: 85
+    N2: 172
+    vocabulary: 141
+    length: 257
+    calculated_length: 944.1057163358342
+    volume: 1834.86469756649
+    difficulty: 8.734375
+    effort: 16026.39634280731
+    time: 890.3553523781839
+    bugs: 0.6116215658554967
+app/bot/handlers/payments.py:
+    h1: 10
+    h2: 57
+    N1: 39
+    N2: 72
+    vocabulary: 67
+    length: 111
+    calculated_length: 365.69401175626393
+    volume: 673.3359001408127
+    difficulty: 6.315789473684211
+    effort: 4252.6477903630275
+    time: 236.25821057572375
+    bugs: 0.22444530004693755
+app/bot/handlers/events.py:
+    h1: 8
+    h2: 74
+    N1: 49
+    N2: 94
+    vocabulary: 82
+    length: 143
+    calculated_length: 483.4995490565424
+    volume: 909.1299366603861
+    difficulty: 5.081081081081081
+    effort: 4619.362921409529
+    time: 256.6312734116405
+    bugs: 0.3030433122201287
+app/bot/handlers/__init__.py:
+    h1: 1
+    h2: 2
+    N1: 2
+    N2: 4
+    vocabulary: 3
+    length: 6
+    calculated_length: 2.0
+    volume: 9.509775004326938
+    difficulty: 1.0
+    effort: 9.509775004326938
+    time: 0.5283208335737188
+    bugs: 0.003169925001442313
+app/bot/handlers/menu.py:
+    h1: 5
+    h2: 14
+    N1: 8
+    N2: 16
+    vocabulary: 19
+    length: 24
+    calculated_length: 64.91260938324326
+    volume: 101.95026032264605
+    difficulty: 2.857142857142857
+    effort: 291.28645806470297
+    time: 16.18258100359461
+    bugs: 0.03398342010754868
+app/bot/handlers/common.py:
+    h1: 8
+    h2: 18
+    N1: 13
+    N2: 23
+    vocabulary: 26
+    length: 36
+    calculated_length: 99.05865002596161
+    volume: 169.21582985307933
+    difficulty: 5.111111111111111
+    effort: 864.8809081379609
+    time: 48.048939340997826
+    bugs: 0.05640527661769311
+app/src/models/expense_participant.py:
+    h1: 0
+    h2: 0
+    N1: 0
+    N2: 0
+    vocabulary: 0
+    length: 0
+    calculated_length: 0
+    volume: 0
+    difficulty: 0
+    effort: 0
+    time: 0.0
+    bugs: 0.0
+app/src/models/user.py:
+    h1: 0
+    h2: 0
+    N1: 0
+    N2: 0
+    vocabulary: 0
+    length: 0
+    calculated_length: 0
+    volume: 0
+    difficulty: 0
+    effort: 0
+    time: 0.0
+    bugs: 0.0
+app/src/models/event.py:
+    h1: 0
+    h2: 0
+    N1: 0
+    N2: 0
+    vocabulary: 0
+    length: 0
+    calculated_length: 0
+    volume: 0
+    difficulty: 0
+    effort: 0
+    time: 0.0
+    bugs: 0.0
+app/src/models/expense.py:
+    h1: 0
+    h2: 0
+    N1: 0
+    N2: 0
+    vocabulary: 0
+    length: 0
+    calculated_length: 0
+    volume: 0
+    difficulty: 0
+    effort: 0
+    time: 0.0
+    bugs: 0.0
+app/src/models/settlement.py:
+    h1: 0
+    h2: 0
+    N1: 0
+    N2: 0
+    vocabulary: 0
+    length: 0
+    calculated_length: 0
+    volume: 0
+    difficulty: 0
+    effort: 0
+    time: 0.0
+    bugs: 0.0
+app/src/models/__init__.py:
+    h1: 0
+    h2: 0
+    N1: 0
+    N2: 0
+    vocabulary: 0
+    length: 0
+    calculated_length: 0
+    volume: 0
+    difficulty: 0
+    effort: 0
+    time: 0.0
+    bugs: 0.0
+app/src/models/event_member.py:
+    h1: 0
+    h2: 0
+    N1: 0
+    N2: 0
+    vocabulary: 0
+    length: 0
+    calculated_length: 0
+    volume: 0
+    difficulty: 0
+    effort: 0
+    time: 0.0
+    bugs: 0.0
+app/src/models/base.py:
+    h1: 0
+    h2: 0
+    N1: 0
+    N2: 0
+    vocabulary: 0
+    length: 0
+    calculated_length: 0
+    volume: 0
+    difficulty: 0
+    effort: 0
+    time: 0.0
+    bugs: 0.0
+app/src/schemas/user.py:
+    h1: 1
+    h2: 4
+    N1: 5
+    N2: 10
+    vocabulary: 5
+    length: 15
+    calculated_length: 8.0
+    volume: 34.82892142331043
+    difficulty: 1.25
+    effort: 43.53615177913804
+    time: 2.418675098841002
+    bugs: 0.01160964047443681
+app/src/schemas/event.py:
+    h1: 1
+    h2: 3
+    N1: 11
+    N2: 22
+    vocabulary: 4
+    length: 33
+    calculated_length: 4.754887502163469
+    volume: 66.0
+    difficulty: 3.6666666666666665
+    effort: 242.0
+    time: 13.444444444444445
+    bugs: 0.022
+app/src/schemas/expense.py:
+    h1: 8
+    h2: 20
+    N1: 17
+    N2: 31
+    vocabulary: 28
+    length: 48
+    calculated_length: 110.43856189774725
+    volume: 230.75303625876498
+    difficulty: 6.2
+    effort: 1430.6688248043429
+    time: 79.48160137801905
+    bugs: 0.07691767875292166
+app/src/schemas/settlement.py:
+    h1: 1
+    h2: 2
+    N1: 1
+    N2: 2
+    vocabulary: 3
+    length: 3
+    calculated_length: 2.0
+    volume: 4.754887502163469
+    difficulty: 0.5
+    effort: 2.3774437510817346
+    time: 0.1320802083934297
+    bugs: 0.0015849625007211565
+app/src/schemas/__init__.py:
+    h1: 0
+    h2: 0
+    N1: 0
+    N2: 0
+    vocabulary: 0
+    length: 0
+    calculated_length: 0
+    volume: 0
+    difficulty: 0
+    effort: 0
+    time: 0.0
+    bugs: 0.0
+app/src/db/user.py:
+    h1: 3
+    h2: 10
+    N1: 6
+    N2: 12
+    vocabulary: 13
+    length: 18
+    calculated_length: 37.974168451037094
+    volume: 66.60791492653966
+    difficulty: 1.8
+    effort: 119.8942468677714
+    time: 6.660791492653967
+    bugs: 0.022202638308846556
+app/src/db/event.py:
+    h1: 7
+    h2: 49
+    N1: 34
+    N2: 62
+    vocabulary: 56
+    length: 96
+    calculated_length: 294.7722668160484
+    volume: 557.50607251753
+    difficulty: 4.428571428571429
+    effort: 2468.9554640062047
+    time: 137.16419244478914
+    bugs: 0.18583535750584335
+app/src/db/expense.py:
+    h1: 13
+    h2: 104
+    N1: 70
+    N2: 134
+    vocabulary: 117
+    length: 204
+    calculated_length: 744.9514470225078
+    volume: 1401.5544027950145
+    difficulty: 8.375
+    effort: 11738.018123408247
+    time: 652.1121179671248
+    bugs: 0.46718480093167153
+app/src/db/settlement.py:
+    h1: 12
+    h2: 97
+    N1: 68
+    N2: 131
+    vocabulary: 109
+    length: 199
+    calculated_length: 683.2110957008053
+    volume: 1346.8686806306082
+    difficulty: 8.103092783505154
+    effort: 10913.80188634699
+    time: 606.3223270192772
+    bugs: 0.4489562268768694
+app/src/db/core.py:
+    h1: 0
+    h2: 0
+    N1: 0
+    N2: 0
+    vocabulary: 0
+    length: 0
+    calculated_length: 0
+    volume: 0
+    difficulty: 0
+    effort: 0
+    time: 0.0
+    bugs: 0.0
+app/src/services/event.py:
+    h1: 6
+    h2: 41
+    N1: 27
+    N2: 46
+    vocabulary: 47
+    length: 73
+    calculated_length: 235.16940719366838
+    volume: 405.48498617246753
+    difficulty: 3.3658536585365852
+    effort: 1364.8031241902565
+    time: 75.82239578834759
+    bugs: 0.13516166205748917
+app/src/services/expense.py:
+    h1: 15
+    h2: 61
+    N1: 44
+    N2: 77
+    vocabulary: 76
+    length: 121
+    calculated_length: 420.37833652546385
+    volume: 755.9992291266739
+    difficulty: 9.467213114754099
+    effort: 7157.205816732036
+    time: 397.62254537400196
+    bugs: 0.2519997430422246
+app/src/services/settlement.py:
+    h1: 0
+    h2: 0
+    N1: 0
+    N2: 0
+    vocabulary: 0
+    length: 0
+    calculated_length: 0
+    volume: 0
+    difficulty: 0
+    effort: 0
+    time: 0.0
+    bugs: 0.0
+
